@@ -1,0 +1,588 @@
+# Agent Commission Tracking System
+
+Building a focused, lightweight system for tracking agent leads, deals, and hierarchical commissions. The system will ensure a strict chain of custody for leads, preventing duplicate claims, and automating commission payouts upon deal completion.
+
+> **Problem Name:** Multi-Source Lead Attribution & Commission Tracking System
+>
+> _"Tracking who owns a lead, even when it has multiple contact points, and ensuring correct commission payout across a hierarchical agent network of 200+ agents."_
+
+---
+
+## Technology Stack
+
+| Layer | Tool | Why |
+|---|---|---|
+| **Framework** | Next.js 14 (App Router) | Server Actions, streaming, route groups, layouts |
+| **Database** | SQLite (via `better-sqlite3`) | Zero-config, file-based, no server needed |
+| **ORM** | Prisma | Type-safe queries, auto-migrations, seeding |
+| **Styling** | Tailwind CSS v3 | Utility-first, dark mode support |
+| **UI Components** | shadcn/ui (built on **Radix UI**) | 40+ accessible, composable components |
+| **Icons** | Lucide React | Ships with shadcn/ui |
+| **Charts** | Recharts | Commission analytics, agent leaderboard, deal funnels |
+| **Forms** | React Hook Form + Zod | Type-safe validation with error messages |
+| **State** | Zustand | Lightweight client-side state for modals/filters |
+| **Auth** | NextAuth.js v5 | Role-based login (Admin / Salesperson / Agent) |
+
+> **Note on "Radix UI":** shadcn/ui is already built on top of Radix UI primitives. Every shadcn component (Dialog, Select, Dropdown, etc.) uses Radix under the hood, so we get both.
+
+---
+
+## Data Structure (Prisma Schema) — Production-Grade
+
+The core data structures model the "Graph" of agents, contacts, and commissions. **My additions** are marked with `// 🆕 ADDED` comments.
+
+```prisma
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 🆕 USERS & AUTH (Not in original — needed for role-based access)
+// ─────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // Hashed with bcrypt
+  role      String   // 'ADMIN' | 'SALESPERSON' | 'AGENT'
+  agentId   String?  @unique // Link to Agent profile if role = AGENT or SALESPERSON
+  agent     Agent?   @relation(fields: [agentId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AGENT HIERARCHY (Self-referential Graph / Adjacency List)
+// ─────────────────────────────────────────────────────────────────
+
+model Agent {
+  id              String    @id @default(uuid())
+  agentCode       String    @unique  // 🆕 e.g., "AGT-0042" — unique ID for tracking
+  name            String
+  phone           String?   // 🆕 Agent's own contact
+  email           String?   // 🆕 Agent's email
+  type            String    // 'CHANNEL_PARTNER' | 'SALESPERSON' | 'SUB_AGENT'
+
+  // ── Graph Edge: self-referential parent relationship ──
+  parentId        String?
+  parent          Agent?    @relation("AgentHierarchy", fields: [parentId], references: [id])
+  children        Agent[]   @relation("AgentHierarchy")
+
+  commissionRate  Float     @default(5.0) // % of deal value — locked at onboarding
+  isActive        Boolean   @default(true) // 🆕 Soft delete / deactivation
+
+  // ── Relations ──
+  user            User?
+  ownedLeads      Lead[]    @relation("LeadOwner")
+  assignments     LeadAssignment[]
+  commissions     Commission[]
+  payouts         Payout[]  // 🆕
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt // 🆕
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LEADS (Core Entity — ownership is IMMUTABLE)
+// ─────────────────────────────────────────────────────────────────
+
+model Lead {
+  id              String    @id @default(uuid())
+  name            String
+  email           String?   // 🆕
+  city            String?   // 🆕
+  notes           String?   // 🆕
+
+  // ── Source Control ──
+  sourceType      String    // 'AGENT' | 'SALESPERSON' | 'DIRECT'
+  ownerId         String    // ⚠️ IMMUTABLE after creation — the agent who owns this lead
+  owner           Agent     @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  // ── Pipeline Status ──
+  status          String    @default("NEW")
+  // Status flow: NEW → QUALIFIED → SITE_VISIT → QUOTED → WON → LOST
+
+  // ── Relations ──
+  contacts        LeadContact[]
+  assignments     LeadAssignment[]
+  deals           Deal[]
+  activities      LeadActivity[] // 🆕 Audit log
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt // 🆕
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LEAD CONTACTS (Solves "one lead, many numbers" problem)
+// ─────────────────────────────────────────────────────────────────
+
+model LeadContact {
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  phoneNumber String   @unique // CRITICAL: unique constraint stops duplicate claims
+  isPrimary   Boolean  @default(false)
+  label       String?  // 🆕 e.g., "Work", "Home", "WhatsApp"
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber]) // 🆕 Fast lookup for duplicate detection
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LEAD ASSIGNMENTS (Ownership vs. Execution separation)
+// ─────────────────────────────────────────────────────────────────
+
+model LeadAssignment {
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  assignedBy  String   // 🆕 Admin/Salesperson who made the assignment
+  isActive    Boolean  @default(true) // 🆕 Track re-assignments
+  assignedAt  DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DEALS
+// ─────────────────────────────────────────────────────────────────
+
+model Deal {
+  id              String    @id @default(uuid())
+  leadId          String
+  lead            Lead      @relation(fields: [leadId], references: [id])
+  dealValue       Float
+  category        String?   // 🆕 e.g., '3kW', '5kW', 'Commercial'
+  status          String    @default("OPEN") // OPEN | WON | LOST
+  paymentReceived Boolean   @default(false)
+  paymentDate     DateTime? // 🆕
+  closedAt        DateTime?
+  notes           String?   // 🆕
+
+  commissions     Commission[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt // 🆕
+
+  @@index([leadId]) // 🆕
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMMISSIONS (Ledger — one record per agent per role per deal)
+// ─────────────────────────────────────────────────────────────────
+
+model Commission {
+  id          String   @id @default(uuid())
+  dealId      String
+  deal        Deal     @relation(fields: [dealId], references: [id])
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+
+  role        String   // 'OWNER' | 'CLOSER' | 'OVERRIDE' (for parent agents)
+  rate        Float    // 🆕 The rate LOCKED at deal-close time (not current agent rate)
+  amount      Float    // Actual ₹ amount
+
+  status      String   @default("PENDING") // PENDING | APPROVED | PAID | DISPUTED
+  disputeNote String?  // 🆕
+
+  payout      Payout?  // 🆕 Link to actual bank transfer
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt // 🆕
+
+  @@unique([dealId, agentId, role]) // 🆕 Prevents duplicate commission entries
+  @@index([agentId])               // 🆕
+  @@index([status])                // 🆕
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 🆕 PAYOUTS (Finance team records actual bank transfers)
+// ─────────────────────────────────────────────────────────────────
+
+model Payout {
+  id           String     @id @default(uuid())
+  commissionId String     @unique
+  commission   Commission @relation(fields: [commissionId], references: [id])
+  agentId      String
+  agent        Agent      @relation(fields: [agentId], references: [id])
+  amount       Float
+  method       String?    // 'BANK_TRANSFER' | 'CASH' | 'UPI'
+  reference    String?    // Transaction ID / UTR number
+  paidAt       DateTime   @default(now())
+  paidBy       String     // Admin user ID who processed payment
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 🆕 LEAD ACTIVITY LOG (Audit trail — who changed what and when)
+// ─────────────────────────────────────────────────────────────────
+
+model LeadActivity {
+  id        String   @id @default(uuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  type      String   // 'STATUS_CHANGE' | 'NOTE_ADDED' | 'ASSIGNED' | 'DEAL_CREATED'
+  oldValue  String?
+  newValue  String?
+  note      String?
+  byUserId  String
+  createdAt DateTime @default(now())
+}
+```
+
+---
+
+## Graph Algorithms & Logic Design
+
+Because agents can refer other agents (creating a tree/graph hierarchy), attributing commissions when a deal closes is a **Graph Traversal Problem**.
+
+### The Core Algorithm: Upward Walk (Parent Chain Traversal)
+
+When a deal transitions to `paymentReceived = true`, we execute:
+
+```
+Agent Tree Structure (Adjacency List):
+
+    Company (root, no parentId)
+       ├── Salesperson A
+       │     ├── Channel Partner X
+       │     │     └── Sub-Agent P  ← Lead Owner
+       │     └── Channel Partner Y
+       └── Salesperson B
+
+When Sub-Agent P's lead closes:
+  Step 1 → Commission for P (OWNER role, 5%)
+  Step 2 → Commission for Channel Partner X (OVERRIDE role, 1%)
+  Step 3 → Commission for Salesperson A (OVERRIDE role, 1%)
+  Step 4 → Stop (Company root reached)
+```
+
+### Implementation (TypeScript)
+
+```typescript
+// lib/commission-engine.ts
+
+/**
+ * GRAPH TRAVERSAL: Upward Walk through Agent Hierarchy
+ *
+ * Algorithm:
+ * 1. Start at the Lead Owner node.
+ * 2. Calculate OWNER commission (agent's locked rate).
+ * 3. If a different salesperson CLOSED the deal → CLOSER commission.
+ * 4. Walk UP the parentId chain → OVERRIDE commission per parent.
+ * 5. Stop when parentId is null (root reached).
+ * 6. Cycle detection via visited Set.
+ *
+ * Time Complexity: O(D) where D = tree depth (typically 3-4)
+ * Space Complexity: O(D) for the visited Set
+ */
+
+async function calculateCommissions(dealId: string) {
+  const deal = await prisma.deal.findUnique({
+    where: { id: dealId },
+    include: {
+      lead: {
+        include: {
+          owner: true,
+          assignments: { where: { isActive: true }, include: { agent: true } }
+        }
+      }
+    }
+  });
+
+  if (!deal || deal.status !== 'WON' || !deal.paymentReceived) return [];
+
+  const commissions = [];
+  const visited = new Set<string>(); // ── Cycle detection ──
+
+  // ── Step 1: OWNER commission ──
+  const owner = deal.lead.owner;
+  commissions.push({
+    dealId,
+    agentId: owner.id,
+    role: 'OWNER',
+    rate: owner.commissionRate,  // 🆕 Lock the rate at this moment
+    amount: (owner.commissionRate / 100) * deal.dealValue,
+    status: 'PENDING',
+  });
+  visited.add(owner.id);
+
+  // ── Step 2: CLOSER commission (if different from owner) ──
+  const activeAssignment = deal.lead.assignments[0];
+  if (activeAssignment && activeAssignment.agentId !== owner.id) {
+    const closer = activeAssignment.agent;
+    const closerRate = 2.0; // Configurable closer bonus
+    commissions.push({
+      dealId,
+      agentId: closer.id,
+      role: 'CLOSER',
+      rate: closerRate,
+      amount: (closerRate / 100) * deal.dealValue,
+      status: 'PENDING',
+    });
+    visited.add(closer.id);
+  }
+
+  // ── Step 3: OVERRIDE commissions — walk UP the graph ──
+  let currentAgentId = owner.parentId;
+  while (currentAgentId && !visited.has(currentAgentId)) {
+    visited.add(currentAgentId);
+    const parentAgent = await prisma.agent.findUnique({
+      where: { id: currentAgentId }
+    });
+    if (!parentAgent) break;
+
+    const overrideRate = 1.0; // Can be made per-tier configurable
+    commissions.push({
+      dealId,
+      agentId: parentAgent.id,
+      role: 'OVERRIDE',
+      rate: overrideRate,
+      amount: (overrideRate / 100) * deal.dealValue,
+      status: 'PENDING',
+    });
+
+    currentAgentId = parentAgent.parentId; // ── Move up the tree ──
+  }
+
+  // ── Step 4: Atomic bulk insert ──
+  await prisma.commission.createMany({ data: commissions, skipDuplicates: true });
+  return commissions;
+}
+```
+
+### Duplicate Detection Algorithm
+
+```typescript
+// lib/duplicate-check.ts
+
+/**
+ * Before creating a lead, check ALL phone numbers against the
+ * LeadContact table. If any number already exists, the lead is a duplicate.
+ *
+ * This is essentially a Hash Table Lookup — O(1) per phone number
+ * thanks to the database index on phoneNumber.
+ */
+
+async function checkDuplicatePhones(phones: string[]): Promise<{
+  isDuplicate: boolean;
+  existingLead?: { id: string; name: string; ownerName: string };
+}> {
+  const existing = await prisma.leadContact.findFirst({
+    where: { phoneNumber: { in: phones } },
+    include: { lead: { include: { owner: true } } }
+  });
+
+  if (existing) {
+    return {
+      isDuplicate: true,
+      existingLead: {
+        id: existing.lead.id,
+        name: existing.lead.name,
+        ownerName: existing.lead.owner.name,
+      }
+    };
+  }
+  return { isDuplicate: false };
+}
+```
+
+---
+
+## Application Pages & UI
+
+| Route | Page | Access Role | Key Components |
+|---|---|---|---|
+| `/login` | Login page | Public | shadcn Card + Form |
+| `/dashboard` | Admin KPI Overview | Admin | Recharts bar/pie charts |
+| `/agents` | Agent List + Hierarchy Tree | Admin | DataTable, TreeView |
+| `/agents/[id]` | Agent Profile + Ledger | Admin | Tabs, Commission table |
+| `/agents/new` | Create/Edit Agent | Admin | Form with parent selector |
+| `/leads` | Lead Table with filters | Admin, Salesperson | DataTable, Status badges |
+| `/leads/[id]` | Lead Detail + Pipeline | Admin, Salesperson | Timeline, Status stepper |
+| `/leads/new` | Submit Lead (dup check) | All roles | Multi-phone form, real-time check |
+| `/deals` | All Deals Table | Admin | DataTable, Value summary |
+| `/deals/[id]` | Deal Detail + Commissions | Admin | "Mark Paid" button triggers engine |
+| `/commissions` | Commission Ledger | Admin | Filterable table, approve/dispute |
+| `/payouts` | Finance Payout Queue | Admin | Pending payouts, record payment |
+| `/my` | Agent Self-Service | Agent | Personal leads, earnings, statement |
+
+---
+
+## Implementation Phases (Expanded)
+
+### Phase 1: Foundation
+- Initialize Next.js with `--typescript --tailwind --app`
+- Install & configure Prisma with SQLite
+- Install shadcn/ui (init + all needed components)
+- Install Recharts, React Hook Form, Zod, Zustand, NextAuth, bcryptjs
+
+### Phase 2: Auth & Roles
+- NextAuth credentials provider (email + hashed password)
+- Route-protecting middleware (`ADMIN`, `SALESPERSON`, `AGENT`)
+- Login page with shadcn Card + Form
+
+### Phase 3: Layout Shell
+- App shell with sidebar navigation (shadcn Sheet + NavigationMenu)
+- Dark mode toggle (shadcn ThemeProvider)
+- Role-aware nav items (Agents see only `/my`, Admins see everything)
+
+### Phase 4: Agent Module
+- Agent CRUD with hierarchy (parent selector dropdown)
+- Agent hierarchy visualization (tree or org chart)
+- Agent detail page with commission history
+
+### Phase 5: Lead Module
+- Lead submission with real-time duplicate phone detection
+- Multi-phone contact form (React Hook Form `useFieldArray`)
+- Lead pipeline (table with status column + quick-update dropdown)
+- Lead detail with activity timeline (🆕 uses LeadActivity model)
+- Lead assignment to salesperson
+
+### Phase 6: Deal & Commission Engine
+- Deal creation linked to WON leads
+- "Mark Payment Received" → triggers `calculateCommissions()` graph traversal
+- Commission ledger with Approve / Dispute / Pay actions
+- Payout recording with method and reference fields (🆕)
+
+### Phase 7: Dashboards & Analytics (🆕 — not in original)
+- **Admin Dashboard:** Total revenue, total commission liability, deals by status (Recharts BarChart, PieChart)
+- **Agent Leaderboard:** Top 10 by conversion rate (Recharts)
+- **Agent Self-Service `/my`:** Personal leads, pending earnings, paid history
+- **Monthly Statement:** Per-agent summary (future: PDF via `@react-pdf/renderer`)
+
+---
+
+## Business Rules Enforced in Code
+
+| # | Rule | Enforcement |
+|---|---|---|
+| 1 | **Phone uniqueness** | `@unique` constraint + API pre-check |
+| 2 | **Owner immutability** | Server action NEVER updates `ownerId` |
+| 3 | **Commission trigger** | Only fires on `paymentReceived: false → true` |
+| 4 | **Rate lock** | 🆕 Rate read from Agent at deal-close → stored in `Commission.rate` |
+| 5 | **No orphan leads** | FK constraint on `ownerId` |
+| 6 | **No agent lead without ID** | Agent must have `agentCode` before submitting |
+| 7 | **Cycle-safe hierarchy** | `visited` Set in graph traversal |
+| 8 | **First-entry-wins** | Timestamp-based: first agent to register a phone number owns it |
+| 9 | **Finance approval gate** | 🆕 Commission goes PENDING → APPROVED → PAID (manual approval step) |
+
+---
+
+## Entity Relationship Graph
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                     SYSTEM OVERVIEW                        │
+│                                                            │
+│   User ──1:1──► Agent ──1:N──► Agent (children)            │
+│                   │                                        │
+│                   │ owns (immutable)                        │
+│                   ▼                                        │
+│                 Lead ──1:N──► LeadContact (phones)          │
+│                   │                                        │
+│                   ├──1:N──► LeadAssignment (execution)      │
+│                   │                                        │
+│                   ├──1:N──► LeadActivity (audit log)        │
+│                   │                                        │
+│                   └──1:N──► Deal                            │
+│                               │                            │
+│                               │ payment received?          │
+│                               │ YES → Graph Traversal      │
+│                               ▼                            │
+│                          Commission ──1:1──► Payout         │
+│                          (per agent per role)               │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Folder Structure
+
+```
+agent-commission-tracking/
+├── app/
+│   ├── (auth)/
+│   │   └── login/page.tsx
+│   ├── (dashboard)/
+│   │   ├── layout.tsx          # Sidebar shell
+│   │   ├── dashboard/page.tsx  # Admin KPIs
+│   │   ├── agents/
+│   │   │   ├── page.tsx        # List
+│   │   │   ├── new/page.tsx    # Create
+│   │   │   └── [id]/page.tsx   # Detail
+│   │   ├── leads/
+│   │   │   ├── page.tsx
+│   │   │   ├── new/page.tsx
+│   │   │   └── [id]/page.tsx
+│   │   ├── deals/
+│   │   │   ├── page.tsx
+│   │   │   └── [id]/page.tsx
+│   │   ├── commissions/page.tsx
+│   │   └── payouts/page.tsx
+│   ├── my/page.tsx             # Agent self-service
+│   └── api/auth/[...nextauth]/route.ts
+├── components/
+│   ├── ui/                     # shadcn/ui generated components
+│   ├── layout/                 # Sidebar, Header, ThemeToggle
+│   ├── agents/                 # AgentForm, AgentTree, AgentCard
+│   ├── leads/                  # LeadForm, PhoneInput, StatusBadge
+│   ├── deals/                  # DealForm, PaymentButton
+│   ├── commissions/            # CommissionTable, ApproveButton
+│   └── charts/                 # RevenueChart, AgentLeaderboard
+├── lib/
+│   ├── prisma.ts               # Singleton Prisma client
+│   ├── commission-engine.ts    # Graph traversal algorithm
+│   ├── duplicate-check.ts      # Phone lookup
+│   ├── auth.ts                 # NextAuth config
+│   └── utils.ts                # cn(), formatCurrency(), etc.
+├── actions/                    # Server Actions
+│   ├── agents.ts
+│   ├── leads.ts
+│   ├── deals.ts
+│   └── commissions.ts
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.ts                 # Demo data: 3-level agent tree
+├── types/
+│   └── index.ts                # Shared TypeScript types
+└── middleware.ts               # Route protection by role
+```
+
+---
+
+## What I Added vs. Original Plan
+
+| Area | Original Plan | 🆕 My Addition |
+|---|---|---|
+| Auth | ❌ Not planned | ✅ NextAuth with 3 roles + middleware |
+| Agent Code | ❌ Missing | ✅ `agentCode` unique identifier (AGT-0042) |
+| Commission Rate Lock | ❌ Not considered | ✅ Rate stored at deal-close time in `Commission.rate` |
+| CLOSER role | ❌ Only OWNER + REFERRER | ✅ Separate CLOSER commission for executing salesperson |
+| OVERRIDE role | ❌ Not modeled | ✅ Commission for every parent in the agent tree |
+| Payout model | ❌ Missing | ✅ Full `Payout` table with bank method + UTR |
+| Audit trail | ❌ Missing | ✅ `LeadActivity` log (who changed what, when) |
+| Analytics | ❌ Not planned | ✅ Recharts dashboards for Admin + Agent |
+| Agent self-service | ❌ Not planned | ✅ `/my` page for agents to see their ledger |
+| Phone label | ❌ Single type | ✅ Label field (Work / WhatsApp / Home) |
+| DB Indexes | ✅ Mentioned SQL | ✅ Added 5 Prisma indexes for production performance |
+| Soft delete | ❌ Not considered | ✅ `isActive` flag on Agent |
+| Dispute flow | ❌ Not considered | ✅ DISPUTED status + `disputeNote` field |
+| Finance approval | ❌ Auto-paid | ✅ PENDING → APPROVED → PAID workflow |
+| Deal category | ❌ Not modeled | ✅ Category field for variable commission rates |
+| Cycle detection | ✅ Mentioned | ✅ Fully implemented with `visited` Set |
+
+---
+
+## Verification Plan
+
+- **Seed Script:** Create a 3-level agent tree (Sub-agent → CP → Salesperson), submit a lead, create a deal, mark payment received → verify exactly 3 commission records with correct amounts and roles.
+- **Duplicate Test:** Attempt to add same phone number to two different leads → Prisma unique constraint error.
+- **Immutability Test:** Attempt to update `ownerId` via server action → should be blocked in code.
+- **Cycle Test:** Create agent with circular `parentId` → commission engine should terminate cleanly.
+- **Dev Server:** Run `npm run dev`, verify all pages render with seed data.

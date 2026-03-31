@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// USERS & AUTH
+// ─────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // Hashed with bcrypt
+  role      String   // 'ADMIN' | 'SALESPERSON' | 'AGENT'
+  agentId   String?  @unique // Link to Agent profile if role = AGENT or SALESPERSON
+  agent     Agent?   @relation(fields: [agentId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// AGENT HIERARCHY
+// ─────────────────────────────────────────────────────────────────
+
+model Agent {
+  id              String    @id @default(uuid())
+  agentCode       String    @unique  // e.g., "AGT-0042"
+  name            String
+  phone           String?   
+  email           String?   
+  type            String    // 'CHANNEL_PARTNER' | 'SALESPERSON' | 'SUB_AGENT'
+
+  // ── Graph Edge: self-referential parent relationship ──
+  parentId        String?
+  parent          Agent?    @relation("AgentHierarchy", fields: [parentId], references: [id])
+  children        Agent[]   @relation("AgentHierarchy")
+
+  commissionRate  Float     @default(5.0) // % of deal value
+  isActive        Boolean   @default(true) 
+
+  // ── Relations ──
+  user            User?
+  ownedLeads      Lead[]    @relation("LeadOwner")
+  assignments     LeadAssignment[]
+  commissions     Commission[]
+  payouts         Payout[]  
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LEADS
+// ─────────────────────────────────────────────────────────────────
+
+model Lead {
+  id              String    @id @default(uuid())
+  name            String
+  email           String?   
+  location        String    
+  notes           String?   
+
+  // ── Source Control ──
+  sourceType      String    // 'AGENT' | 'SALESPERSON' | 'DIRECT'
+  ownerId         String    // IMMUTABLE
+  owner           Agent     @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  // ── Pipeline Status ──
+  status          String    @default("NEW")
+
+  // ── Relations ──
+  contacts        LeadContact[]
+  assignments     LeadAssignment[]
+  deals           Deal[]
+  activities      LeadActivity[] 
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt 
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LEAD CONTACTS
+// ─────────────────────────────────────────────────────────────────
+
+model LeadContact {
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  phoneNumber String   @unique 
+  isPrimary   Boolean  @default(false)
+  label       String?  
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber])
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LEAD ASSIGNMENTS
+// ─────────────────────────────────────────────────────────────────
+
+model LeadAssignment {
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  assignedBy  String   
+  isActive    Boolean  @default(true) 
+  assignedAt  DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DEALS
+// ─────────────────────────────────────────────────────────────────
+
+model Deal {
+  id              String    @id @default(uuid())
+  leadId          String
+  lead            Lead      @relation(fields: [leadId], references: [id])
+  dealValue       Float
+  category        String?   
+  status          String    @default("OPEN") 
+  paymentReceived Boolean   @default(false)
+  paymentDate     DateTime? 
+  closedAt        DateTime?
+  notes           String?   
+
+  commissions     Commission[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt 
+
+  @@index([leadId]) 
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMMISSIONS
+// ─────────────────────────────────────────────────────────────────
+
+model Commission {
+  id          String   @id @default(uuid())
+  dealId      String
+  deal        Deal     @relation(fields: [dealId], references: [id])
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+
+  role        String   // 'OWNER' | 'CLOSER' | 'OVERRIDE'
+  rate        Float    
+  amount      Float    
+
+  status      String   @default("PENDING") 
+  disputeNote String?  
+
+  payout      Payout?  
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt 
+
+  @@unique([dealId, agentId, role]) 
+  @@index([agentId])               
+  @@index([status])                
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PAYOUTS 
+// ─────────────────────────────────────────────────────────────────
+
+model Payout {
+  id           String     @id @default(uuid())
+  commissionId String     @unique
+  commission   Commission @relation(fields: [commissionId], references: [id])
+  agentId      String
+  agent        Agent      @relation(fields: [agentId], references: [id])
+  amount       Float
+  method       String?    
+  reference    String?    
+  paidAt       DateTime   @default(now())
+  paidBy       String     
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LEAD ACTIVITY LOG
+// ─────────────────────────────────────────────────────────────────
+
+model LeadActivity {
+  id        String   @id @default(uuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  type      String   
+  oldValue  String?
+  newValue  String?
+  note      String?
+  byUserId  String
+  createdAt DateTime @default(now())
+}
