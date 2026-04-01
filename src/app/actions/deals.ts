@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { auth } from "@/auth"
 
 const DealSchema = z.object({
   leadId: z.string().min(1),
@@ -100,13 +101,18 @@ export async function getDeals() {
 }
 
 export async function getDealById(id: string) {
-  return prisma.deal.findUnique({
+  const session = await auth()
+  const role = session?.user?.role
+  const agentId = session?.user?.agentId
+
+  const deal = await prisma.deal.findUnique({
     where: { id },
     include: {
       lead: {
         include: {
           owner: true,
           contacts: { where: { isPrimary: true } },
+          assignments: true,
         },
       },
       commissions: {
@@ -118,6 +124,16 @@ export async function getDealById(id: string) {
       },
     },
   })
+
+  if (!deal) return null
+
+  if (role !== "ADMIN" && agentId) {
+    const isOwner = deal.lead.ownerId === agentId
+    const isAssigned = deal.lead.assignments.some(a => a.agentId === agentId)
+    if (!isOwner && !isAssigned) throw new Error("Unauthorized to access this deal")
+  }
+
+  return deal
 }
 
 export async function createDeal(formData: FormData) {
@@ -186,6 +202,9 @@ export async function updateDealStatus(dealId: string, status: string) {
 }
 
 export async function approveCommission(commissionId: string) {
+  const session = await auth()
+  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can approve commissions")
+
   await prisma.commission.update({
     where: { id: commissionId },
     data: { status: "APPROVED" },
@@ -195,6 +214,9 @@ export async function approveCommission(commissionId: string) {
 }
 
 export async function disputeCommission(commissionId: string, note: string) {
+  const session = await auth()
+  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can dispute commissions")
+
   await prisma.commission.update({
     where: { id: commissionId },
     data: { status: "DISPUTED", disputeNote: note },
@@ -204,6 +226,9 @@ export async function disputeCommission(commissionId: string, note: string) {
 }
 
 export async function recordPayout(commissionId: string, formData: FormData) {
+  const session = await auth()
+  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can record payouts")
+
   const method = formData.get("method") as string
   const reference = formData.get("reference") as string
   const paidBy = formData.get("paidBy") as string
@@ -219,7 +244,7 @@ export async function recordPayout(commissionId: string, formData: FormData) {
         amount: commission.amount,
         method: method || null,
         reference: reference || null,
-        paidBy: paidBy || "admin",
+        paidBy: paidBy || session.user.name || "admin",
       },
     }),
     prisma.commission.update({

@@ -16,10 +16,7 @@ import {
 } from "lucide-react"
 
 import { signOut } from "next-auth/react"
-
 import { getNavItems } from "./nav-config"
-import { signOut } from "next-auth/react"
-import { LogOut, Banknote } from "lucide-react"
 
 export function SideNav({ role }: { role: string }) {
   const pathname = usePathname()

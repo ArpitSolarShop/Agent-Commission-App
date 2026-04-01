@@ -10,9 +10,12 @@ import {
   Wallet,
   Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  BarChart,
+  PieChart
 } from "lucide-react"
 import Link from "next/link"
+import { DashboardChart } from "@/components/dashboard-chart"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -58,6 +61,22 @@ export default async function DashboardPage() {
     orderBy: { createdAt: "desc" },
     take: 5
   })
+
+  // Prepare chart data for Deals Pipeline
+  const dealStatusCount = await prisma.deal.groupBy({
+    by: ['status'],
+    where: role !== "ADMIN" && agentId ? { lead: { ownerId: agentId } } : {},
+    _count: { status: true },
+  })
+
+  const rawChartData = dealStatusCount.map(d => ({
+    name: d.status.replace("_", " "),
+    value: d._count.status
+  }))
+
+  // Ensure consistent sort order (Open -> In Progress -> Won -> Lost)
+  const statusOrder = ["OPEN", "IN PROGRESS", "CLOSED WON", "CLOSED LOST"]
+  const chartData = rawChartData.sort((a, b) => statusOrder.indexOf(a.name) - statusOrder.indexOf(b.name))
 
   const recentCommissions = await prisma.commission.findMany({
     where: role !== "ADMIN" && agentId ? { agentId } : {},
@@ -119,6 +138,17 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Analytics Chart */}
+      <Card className="rounded-2xl border-zinc-200 dark:border-zinc-800">
+        <CardHeader className="flex flex-row items-center justify-between px-6 pt-6 uppercase tracking-widest text-xs font-bold text-zinc-400">
+          <CardTitle className="text-sm">Deals Pipeline</CardTitle>
+          <BarChart className="h-4 w-4 opacity-50" />
+        </CardHeader>
+        <CardContent className="px-2 md:px-6 pb-6">
+          <DashboardChart data={chartData} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Leads */}

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { auth } from "@/auth"
 
 const LeadSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -59,7 +60,11 @@ export async function getLeads(filters?: { agentId?: string; status?: string }) 
 }
 
 export async function getLeadById(id: string) {
-  return prisma.lead.findUnique({
+  const session = await auth()
+  const role = session?.user?.role
+  const agentId = session?.user?.agentId
+
+  const lead = await prisma.lead.findUnique({
     where: { id },
     include: {
       owner: true,
@@ -73,6 +78,19 @@ export async function getLeadById(id: string) {
       activities: { orderBy: { createdAt: "desc" }, take: 20 },
     },
   })
+
+  if (!lead) return null
+
+  // ReBAC logic: Only Admin, Owner, or Assigned Agents can view
+  if (role !== "ADMIN" && agentId) {
+    const isOwner = lead.ownerId === agentId
+    const isAssigned = lead.assignments.some(a => a.agentId === agentId)
+    if (!isOwner && !isAssigned) {
+      throw new Error("Unauthorized: You do not have permission to view this lead.")
+    }
+  }
+
+  return lead
 }
 
 export async function createLead(formData: FormData) {

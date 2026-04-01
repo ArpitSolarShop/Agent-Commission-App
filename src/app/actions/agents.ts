@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { auth } from "@/auth"
 
 const AgentSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -25,7 +26,11 @@ export async function getAgents() {
 }
 
 export async function getAgentById(id: string) {
-  return prisma.agent.findUnique({
+  const session = await auth()
+  const role = session?.user?.role
+  const agentId = session?.user?.agentId
+
+  const agent = await prisma.agent.findUnique({
     where: { id },
     include: {
       parent: true,
@@ -38,6 +43,16 @@ export async function getAgentById(id: string) {
       },
     },
   })
+
+  if (!agent) return null
+
+  if (role !== "ADMIN" && agentId) {
+    if (agentId !== id && agent.parentId !== agentId) {
+      throw new Error("Unauthorized to view this agent profile")
+    }
+  }
+
+  return agent
 }
 
 export async function getAgentHierarchy() {
@@ -57,6 +72,9 @@ export async function getAgentHierarchy() {
 }
 
 export async function createAgent(formData: FormData) {
+  const session = await auth()
+  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can create agents")
+
   const raw = Object.fromEntries(formData)
   const parsed = AgentSchema.safeParse(raw)
 
@@ -89,6 +107,9 @@ export async function createAgent(formData: FormData) {
 }
 
 export async function updateAgent(id: string, formData: FormData) {
+  const session = await auth()
+  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can update agents")
+
   const raw = Object.fromEntries(formData)
   const parsed = AgentSchema.safeParse(raw)
 
@@ -125,6 +146,9 @@ export async function updateAgent(id: string, formData: FormData) {
 }
 
 export async function toggleAgentStatus(id: string) {
+  const session = await auth()
+  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can toggle agent status")
+
   const agent = await prisma.agent.findUnique({ where: { id } })
   if (!agent) return { error: "Agent not found" }
 
