@@ -13,6 +13,36 @@ const DealSchema = z.object({
 })
 
 // ── COMMISSION ENGINE: Graph Traversal ──
+async function getActiveRate(agentId: string, baseRate: number, commissionType: string, newDealValue: number) {
+  if (commissionType !== "TIERED") return baseRate
+  
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+  
+  const volumeAgg = await prisma.deal.aggregate({
+    where: {
+      status: "CLOSED_WON",
+      closedAt: { gte: startOfMonth },
+      commissions: { some: { agentId } }
+    },
+    _sum: { dealValue: true }
+  })
+  
+  const currentVolume = (volumeAgg._sum.dealValue || 0) + newDealValue
+  
+  const tiers = await prisma.commissionTier.findMany({
+    where: { agentId },
+    orderBy: { volumeThreshold: "desc" }
+  })
+  
+  for (const tier of tiers) {
+    if (currentVolume >= tier.volumeThreshold) return tier.rate
+  }
+  
+  return baseRate
+}
+
 async function calculateCommissions(dealId: string) {
   const deal = await prisma.deal.findUnique({
     where: { id: dealId },
@@ -26,14 +56,16 @@ async function calculateCommissions(dealId: string) {
 
   // 1. OWNER commission — the agent who submitted the lead
   const owner = deal.lead.owner
+  const ownerRate = await getActiveRate(owner.id, owner.commissionRate, owner.commissionType, deal.dealValue)
+
   commissions.push({
     agentId: owner.id,
     role: "OWNER",
     commissionType: owner.commissionType,
-    rate: owner.commissionRate,
+    rate: ownerRate,
     amount: owner.commissionType === "FIXED_AMOUNT" 
-      ? owner.commissionRate 
-      : (deal.dealValue * owner.commissionRate) / 100,
+      ? ownerRate 
+      : (deal.dealValue * ownerRate) / 100,
   })
   visited.add(owner.id)
 
@@ -51,14 +83,16 @@ async function calculateCommissions(dealId: string) {
 
     visited.add(parentAgent.id)
 
+    const parentRate = await getActiveRate(parentAgent.id, parentAgent.commissionRate, parentAgent.commissionType, deal.dealValue)
+
     commissions.push({
       agentId: parentAgent.id,
       role: "OVERRIDE",
       commissionType: parentAgent.commissionType,
-      rate: parentAgent.commissionRate,
+      rate: parentRate,
       amount: parentAgent.commissionType === "FIXED_AMOUNT"
-        ? parentAgent.commissionRate
-        : (deal.dealValue * parentAgent.commissionRate) / 100,
+        ? parentRate
+        : (deal.dealValue * parentRate) / 100,
     })
 
     currentAgentId = parentAgent.parentId

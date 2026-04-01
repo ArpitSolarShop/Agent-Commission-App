@@ -12,8 +12,9 @@ const AgentSchema = z.object({
   phone: z.string().optional().or(z.literal("")),
   type: z.enum(["CHANNEL_PARTNER", "SALESPERSON", "SUB_AGENT"]),
   parentId: z.string().optional().or(z.literal("")),
-  commissionType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]).default("PERCENTAGE"),
+  commissionType: z.enum(["PERCENTAGE", "FIXED_AMOUNT", "TIERED"]).default("PERCENTAGE"),
   commissionRate: z.coerce.number().min(0),
+  tiersJson: z.string().optional(),
 })
 
 export async function getAgents() {
@@ -42,6 +43,7 @@ export async function getAgentById(id: string) {
         orderBy: { createdAt: "desc" },
         include: { deal: { select: { id: true, dealValue: true, status: true } } },
       },
+      tiers: { orderBy: { volumeThreshold: "asc" } }
     },
   })
 
@@ -84,7 +86,12 @@ export async function createAgent(formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate } = parsed.data
+  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate, tiersJson } = parsed.data
+
+  let parsedTiers = []
+  if (commissionType === "TIERED" && tiersJson) {
+    parsedTiers = JSON.parse(tiersJson)
+  }
 
   // Check for duplicate code
   const existing = await prisma.agent.findUnique({ where: { agentCode } })
@@ -102,6 +109,12 @@ export async function createAgent(formData: FormData) {
       parentId: parentId || null,
       commissionType,
       commissionRate,
+      tiers: commissionType === "TIERED" && parsedTiers.length > 0 ? {
+        create: parsedTiers.map((t: any) => ({
+          volumeThreshold: Number(t.volumeThreshold),
+          rate: Number(t.rate)
+        }))
+      } : undefined
     },
   })
 
@@ -120,7 +133,12 @@ export async function updateAgent(id: string, formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate } = parsed.data
+  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate, tiersJson } = parsed.data
+
+  let parsedTiers = []
+  if (commissionType === "TIERED" && tiersJson) {
+    parsedTiers = JSON.parse(tiersJson)
+  }
 
   // Check for duplicate code (excluding current agent)
   const existing = await prisma.agent.findFirst({
@@ -141,6 +159,13 @@ export async function updateAgent(id: string, formData: FormData) {
       parentId: parentId || null,
       commissionType,
       commissionRate,
+      tiers: commissionType === "TIERED" ? {
+        deleteMany: {},
+        create: parsedTiers.map((t: any) => ({
+          volumeThreshold: Number(t.volumeThreshold),
+          rate: Number(t.rate)
+        }))
+      } : { deleteMany: {} }
     },
   })
 

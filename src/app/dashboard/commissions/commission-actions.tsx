@@ -18,10 +18,12 @@ export function CommissionActions({ commission, isAdmin }: { commission: any; is
   const [isPending, startTransition] = useTransition()
   const [showDispute, setShowDispute] = useState(false)
   const [showPayout, setShowPayout] = useState(false)
+  const [gateway, setGateway] = useState("MANUAL")
   const router = useRouter()
 
   const isPaid = commission.status === "PAID"
   const isDisputed = commission.status === "DISPUTED"
+  const isApiGateway = gateway === "RAZORPAY" || gateway === "STRIPE"
 
   function handleApprove() {
     startTransition(async () => {
@@ -106,16 +108,37 @@ export function CommissionActions({ commission, isAdmin }: { commission: any; is
                 <div className="text-lg font-bold text-zinc-900 dark:text-zinc-50">₹{commission.amount.toLocaleString("en-IN")}</div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-zinc-400">Payment Method</label>
-                <Input name="method" placeholder="UPI, Bank, Cash..." required className="text-sm h-8" />
+                <label className="text-[10px] uppercase font-bold text-zinc-400">Payment Gateway</label>
+                <select
+                  name="method"
+                  value={gateway}
+                  onChange={(e) => setGateway(e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="MANUAL">Manual Transfer (Cash/Bank)</option>
+                  <option value="RAZORPAY">Razorpay Integration (Coming Soon)</option>
+                  <option value="STRIPE">Stripe Connect (Coming Soon)</option>
+                </select>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-zinc-400">Reference No.</label>
-                <Input name="reference" placeholder="Ref/Txn ID" required className="text-sm h-8" />
-              </div>
+              
+              {isApiGateway ? (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-md">
+                  <p className="text-[11px] text-amber-800 dark:text-amber-500 font-bold">
+                    ⚠️ API Credentials Required
+                  </p>
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1 leading-tight">
+                    This gateway requires backend configuration. Automated payouts will be unlocked in a future update.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-zinc-400">Reference No.</label>
+                  <Input name="reference" placeholder="Ref/Txn/Cheque ID" required className="text-sm h-8" />
+                </div>
+              )}
               <div className="flex gap-2 pt-2">
                 <Button size="sm" variant="ghost" type="button" className="flex-1 text-xs" onClick={() => setShowPayout(false)}>Cancel</Button>
-                <Button size="sm" type="submit" className="flex-1 text-xs">Confirm Payment</Button>
+                <Button size="sm" type="submit" className="flex-1 text-xs" disabled={isApiGateway || isPending}>Confirm Payment</Button>
               </div>
             </form>
           </CardContent>

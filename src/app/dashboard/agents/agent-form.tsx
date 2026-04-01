@@ -17,6 +17,7 @@ interface Agent {
   parentId: string | null
   commissionType: string
   commissionRate: number
+  tiers?: { id: string; volumeThreshold: number; rate: number }[]
 }
 
 interface AgentOption {
@@ -24,6 +25,8 @@ interface AgentOption {
   name: string
   agentCode: string
 }
+
+import { Plus, Trash2 } from "lucide-react"
 
 export function AgentForm({
   agent,
@@ -36,8 +39,23 @@ export function AgentForm({
   const [isPending, startTransition] = useTransition()
   const isEdit = !!agent
   const [commType, setCommType] = React.useState(agent?.commissionType ?? "PERCENTAGE")
+  const [tiers, setTiers] = React.useState<{ volumeThreshold: number; rate: number }[]>(
+    agent?.tiers ? agent.tiers.map(t => ({ volumeThreshold: t.volumeThreshold, rate: t.rate })) : []
+  )
+
+  const addTier = () => setTiers([...tiers, { volumeThreshold: 0, rate: 0 }])
+  const removeTier = (idx: number) => setTiers(tiers.filter((_, i) => i !== idx))
+  const updateTier = (idx: number, field: "volumeThreshold" | "rate", val: number) => {
+    const newTiers = [...tiers]
+    newTiers[idx][field] = val
+    setTiers(newTiers)
+  }
 
   async function handleSubmit(formData: FormData) {
+    if (commType === "TIERED") {
+      formData.set("tiersJson", JSON.stringify(tiers))
+    }
+
     startTransition(async () => {
       const result = isEdit
         ? await updateAgent(agent!.id, formData)
@@ -109,11 +127,16 @@ export function AgentForm({
               >
                 <option value="PERCENTAGE">Percentage (%)</option>
                 <option value="FIXED_AMOUNT">Fixed Amount ($)</option>
+                <option value="TIERED">Volume Tiered (%)</option>
               </select>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="commissionRate">
-                {commType === "PERCENTAGE" ? "Commission Rate (%)" : "Commission Amount ($)"}
+                {commType === "FIXED_AMOUNT" 
+                  ? "Commission Amount ($)" 
+                  : commType === "TIERED" 
+                    ? "Base Commission Rate (%)" 
+                    : "Commission Rate (%)"}
               </label>
               <Input
                 id="commissionRate"
@@ -127,6 +150,45 @@ export function AgentForm({
               />
             </div>
           </div>
+
+          {commType === "TIERED" && (
+            <div className="space-y-3 p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-900/50">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold">Volume Tiers</label>
+                <Button type="button" variant="outline" size="sm" onClick={addTier} className="h-7 text-xs">
+                  <Plus className="h-3 w-3 mr-1" /> Add Tier
+                </Button>
+              </div>
+              
+              {tiers.length === 0 && (
+                <div className="text-xs text-zinc-500 italic pb-2">No tiers added. Base rate will apply.</div>
+              )}
+
+              {tiers.map((tier, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-zinc-500">Threshold (₹)</label>
+                    <Input 
+                      type="number" min="0" required
+                      value={tier.volumeThreshold} 
+                      onChange={e => updateTier(idx, "volumeThreshold", Number(e.target.value))} 
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-zinc-500">Tier Rate (%)</label>
+                    <Input 
+                      type="number" min="0" step="0.1" required
+                      value={tier.rate} 
+                      onChange={e => updateTier(idx, "rate", Number(e.target.value))} 
+                    />
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="mt-5 text-zinc-400 hover:text-red-500" onClick={() => removeTier(idx)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="parentId">Parent Agent</label>

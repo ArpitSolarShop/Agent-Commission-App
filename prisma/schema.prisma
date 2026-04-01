@@ -39,9 +39,11 @@ model Agent {
   parent          Agent?    @relation("AgentHierarchy", fields: [parentId], references: [id])
   children        Agent[]   @relation("AgentHierarchy")
 
-  commissionType  String    @default("PERCENTAGE") // 'PERCENTAGE' | 'FIXED_AMOUNT'
-  commissionRate  Float     @default(5.0) // % of deal value OR generic amount (e.g. 500)
+  commissionType  String    @default("PERCENTAGE") // 'PERCENTAGE' | 'FIXED_AMOUNT' | 'TIERED'
+  commissionRate  Float     @default(5.0) // % of deal value OR generic amount
   isActive        Boolean   @default(true) 
+  
+  tiers           CommissionTier[] 
 
   // ── Relations ──
   user            User?
@@ -198,4 +200,19 @@ model LeadActivity {
   note      String?
   byUserId  String
   createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMMISSION TIERS (Volume based)
+// ─────────────────────────────────────────────────────────────────
+
+model CommissionTier {
+  id              String   @id @default(cuid())
+  agentId         String
+  agent           Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  
+  volumeThreshold Float    // If deal volume > this amount...
+  rate            Float    // ...use this specific commission rate.
+  
+  createdAt       DateTime @default(now())
 }
