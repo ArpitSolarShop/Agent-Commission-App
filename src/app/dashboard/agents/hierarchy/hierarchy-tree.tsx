@@ -12,6 +12,7 @@ interface AgentNode {
   agentCode: string
   type: string
   parentId: string | null
+  commissionType: string
   commissionRate: number
   isActive: boolean
   _count: { ownedLeads: number; children: number }
@@ -46,7 +47,9 @@ function TreeNode({ agent, childrenMap }: { agent: AgentNode; childrenMap: Map<s
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm truncate">{agent.name}</div>
-            <div className="text-xs text-zinc-500">{agent.agentCode} · {agent.commissionRate}%</div>
+            <div className="text-xs text-zinc-500">
+              {agent.agentCode} · {agent.commissionType === "PERCENTAGE" ? `${agent.commissionRate}%` : `₹${agent.commissionRate}`}
+            </div>
           </div>
           <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${typeColors[agent.type] || ""}`}>
             {agent.type.replace("_", " ")}

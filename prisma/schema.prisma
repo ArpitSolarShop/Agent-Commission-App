@@ -39,7 +39,8 @@ model Agent {
   parent          Agent?    @relation("AgentHierarchy", fields: [parentId], references: [id])
   children        Agent[]   @relation("AgentHierarchy")
 
-  commissionRate  Float     @default(5.0) // % of deal value
+  commissionType  String    @default("PERCENTAGE") // 'PERCENTAGE' | 'FIXED_AMOUNT'
+  commissionRate  Float     @default(5.0) // % of deal value OR generic amount (e.g. 500)
   isActive        Boolean   @default(true) 
 
   // ── Relations ──
@@ -148,9 +149,10 @@ model Commission {
   agentId     String
   agent       Agent    @relation(fields: [agentId], references: [id])
 
-  role        String   // 'OWNER' | 'CLOSER' | 'OVERRIDE'
-  rate        Float    
-  amount      Float    
+  role           String   // 'OWNER' | 'CLOSER' | 'OVERRIDE'
+  commissionType String   @default("PERCENTAGE") // 'PERCENTAGE' | 'FIXED_AMOUNT'
+  rate           Float    
+  amount         Float    
 
   status      String   @default("PENDING") 
   disputeNote String?  

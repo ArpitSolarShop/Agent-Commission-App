@@ -54,7 +54,7 @@ export default async function AgentsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Parent</TableHead>
-                  <TableHead>Rate %</TableHead>
+                  <TableHead>Commission</TableHead>
                   <TableHead>Leads</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead></TableHead>
@@ -71,7 +71,9 @@ export default async function AgentsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-zinc-500 text-xs font-semibold">{agent.parent?.name ?? "—"}</TableCell>
-                    <TableCell className="font-bold">{agent.commissionRate}%</TableCell>
+                    <TableCell className="font-bold">
+                      {agent.commissionType === "PERCENTAGE" ? `${agent.commissionRate}%` : `$${agent.commissionRate}`}
+                    </TableCell>
                     <TableCell className="font-medium text-primary">{agent._count.ownedLeads}</TableCell>
                     <TableCell>
                       <Badge variant={agent.isActive ? "success" : "destructive"} className="text-[10px]">

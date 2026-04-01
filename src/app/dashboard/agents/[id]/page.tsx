@@ -36,7 +36,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-500">Commission Rate</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{agent.commissionRate}%</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{agent.commissionType === "PERCENTAGE" ? `${agent.commissionRate}%` : `₹${agent.commissionRate}`}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-zinc-500">Total Earned</CardTitle></CardHeader>
@@ -111,7 +111,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
                 <TableRow key={c.id}>
                   <TableCell>₹{c.deal.dealValue.toLocaleString("en-IN")}</TableCell>
                   <TableCell><Badge variant="outline">{c.role}</Badge></TableCell>
-                  <TableCell>{c.rate}%</TableCell>
+                  <TableCell>{c.commissionType === "PERCENTAGE" ? `${c.rate}%` : `₹${c.rate}`}</TableCell>
                   <TableCell className="font-medium">₹{c.amount.toLocaleString("en-IN")}</TableCell>
                   <TableCell>
                     <Badge variant={c.status === "APPROVED" ? "success" : c.status === "DISPUTED" ? "destructive" : "warning"}>

@@ -21,7 +21,7 @@ async function calculateCommissions(dealId: string) {
 
   if (!deal || !deal.lead) throw new Error("Deal or Lead not found")
 
-  const commissions: { agentId: string; role: string; rate: number; amount: number }[] = []
+  const commissions: { agentId: string; role: string; commissionType: string; rate: number; amount: number }[] = []
   const visited = new Set<string>() // Cycle prevention
 
   // 1. OWNER commission — the agent who submitted the lead
@@ -29,8 +29,11 @@ async function calculateCommissions(dealId: string) {
   commissions.push({
     agentId: owner.id,
     role: "OWNER",
+    commissionType: owner.commissionType,
     rate: owner.commissionRate,
-    amount: (deal.dealValue * owner.commissionRate) / 100,
+    amount: owner.commissionType === "FIXED_AMOUNT" 
+      ? owner.commissionRate 
+      : (deal.dealValue * owner.commissionRate) / 100,
   })
   visited.add(owner.id)
 
@@ -51,8 +54,11 @@ async function calculateCommissions(dealId: string) {
     commissions.push({
       agentId: parentAgent.id,
       role: "OVERRIDE",
+      commissionType: parentAgent.commissionType,
       rate: parentAgent.commissionRate,
-      amount: (deal.dealValue * parentAgent.commissionRate) / 100,
+      amount: parentAgent.commissionType === "FIXED_AMOUNT"
+        ? parentAgent.commissionRate
+        : (deal.dealValue * parentAgent.commissionRate) / 100,
     })
 
     currentAgentId = parentAgent.parentId
@@ -70,6 +76,7 @@ async function calculateCommissions(dealId: string) {
           },
         },
         update: {
+          commissionType: c.commissionType,
           rate: c.rate,
           amount: c.amount,
         },
@@ -77,6 +84,7 @@ async function calculateCommissions(dealId: string) {
           dealId,
           agentId: c.agentId,
           role: c.role,
+          commissionType: c.commissionType,
           rate: c.rate,
           amount: c.amount,
           status: "PENDING",

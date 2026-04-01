@@ -12,7 +12,8 @@ const AgentSchema = z.object({
   phone: z.string().optional().or(z.literal("")),
   type: z.enum(["CHANNEL_PARTNER", "SALESPERSON", "SUB_AGENT"]),
   parentId: z.string().optional().or(z.literal("")),
-  commissionRate: z.coerce.number().min(0).max(100),
+  commissionType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]).default("PERCENTAGE"),
+  commissionRate: z.coerce.number().min(0),
 })
 
 export async function getAgents() {
@@ -63,6 +64,7 @@ export async function getAgentHierarchy() {
       agentCode: true,
       type: true,
       parentId: true,
+      commissionType: true,
       commissionRate: true,
       isActive: true,
       _count: { select: { ownedLeads: true, children: true } },
@@ -82,7 +84,7 @@ export async function createAgent(formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, agentCode, email, phone, type, parentId, commissionRate } = parsed.data
+  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate } = parsed.data
 
   // Check for duplicate code
   const existing = await prisma.agent.findUnique({ where: { agentCode } })
@@ -98,6 +100,7 @@ export async function createAgent(formData: FormData) {
       phone: phone || null,
       type,
       parentId: parentId || null,
+      commissionType,
       commissionRate,
     },
   })
@@ -117,7 +120,7 @@ export async function updateAgent(id: string, formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, agentCode, email, phone, type, parentId, commissionRate } = parsed.data
+  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate } = parsed.data
 
   // Check for duplicate code (excluding current agent)
   const existing = await prisma.agent.findFirst({
@@ -136,6 +139,7 @@ export async function updateAgent(id: string, formData: FormData) {
       phone: phone || null,
       type,
       parentId: parentId || null,
+      commissionType,
       commissionRate,
     },
   })
