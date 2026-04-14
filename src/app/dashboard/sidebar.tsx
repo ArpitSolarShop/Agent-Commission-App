@@ -5,14 +5,8 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 // Use basic lucide-react icons based on the roles
 import { 
-  Users, 
-  Target, 
-  Briefcase, 
   Banknote, 
-  Settings, 
-  LayoutDashboard,
-  LogOut,
-  PlusCircle
+  LogOut
 } from "lucide-react"
 
 import { signOut } from "next-auth/react"

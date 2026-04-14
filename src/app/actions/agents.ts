@@ -7,7 +7,7 @@ import { auth } from "@/auth"
 
 const AgentSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  agentCode: z.string().min(1, "Agent code is required"),
+  agentCode: z.string().optional().or(z.literal("")),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
   type: z.enum(["CHANNEL_PARTNER", "SALESPERSON", "SUB_AGENT"]),
@@ -25,6 +25,22 @@ export async function getAgents() {
     },
     orderBy: { createdAt: "desc" },
   })
+}
+
+async function getNextAgentCode() {
+  const count = await prisma.agent.count()
+  let nextNumber = count + 1
+  let code = `AGT-${String(nextNumber).padStart(4, '0')}`
+  
+  // Ensure uniqueness even if some were deleted
+  let exists = await prisma.agent.findUnique({ where: { agentCode: code } })
+  while (exists) {
+    nextNumber++
+    code = `AGT-${String(nextNumber).padStart(4, '0')}`
+    exists = await prisma.agent.findUnique({ where: { agentCode: code } })
+  }
+  
+  return code
 }
 
 export async function getAgentById(id: string) {
@@ -86,17 +102,22 @@ export async function createAgent(formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate, tiersJson } = parsed.data
+  const { name, agentCode: providedCode, email, phone, type, parentId, commissionType, commissionRate, tiersJson } = parsed.data
+
+  let agentCode = providedCode
+  if (!agentCode) {
+    agentCode = await getNextAgentCode()
+  } else {
+    // Check for duplicate code if one was provided
+    const existing = await prisma.agent.findUnique({ where: { agentCode } })
+    if (existing) {
+      return { error: { agentCode: ["Agent code already exists"] } }
+    }
+  }
 
   let parsedTiers = []
   if (commissionType === "TIERED" && tiersJson) {
     parsedTiers = JSON.parse(tiersJson)
-  }
-
-  // Check for duplicate code
-  const existing = await prisma.agent.findUnique({ where: { agentCode } })
-  if (existing) {
-    return { error: { agentCode: ["Agent code already exists"] } }
   }
 
   await prisma.agent.create({
@@ -110,7 +131,7 @@ export async function createAgent(formData: FormData) {
       commissionType,
       commissionRate,
       tiers: commissionType === "TIERED" && parsedTiers.length > 0 ? {
-        create: parsedTiers.map((t: any) => ({
+        create: parsedTiers.map((t: { volumeThreshold: number | string; rate: number | string }) => ({
           volumeThreshold: Number(t.volumeThreshold),
           rate: Number(t.rate)
         }))
@@ -161,7 +182,7 @@ export async function updateAgent(id: string, formData: FormData) {
       commissionRate,
       tiers: commissionType === "TIERED" ? {
         deleteMany: {},
-        create: parsedTiers.map((t: any) => ({
+        create: parsedTiers.map((t: { volumeThreshold: number | string; rate: number | string }) => ({
           volumeThreshold: Number(t.volumeThreshold),
           rate: Number(t.rate)
         }))

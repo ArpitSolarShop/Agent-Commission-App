@@ -91,7 +91,7 @@ async function main() {
   })
 
   // 3. Create a Lead owned by Sub-Agent
-  const lead1 = await prisma.lead.create({
+  await prisma.lead.create({
     data: {
       name: "Ravi Sharma",
       location: "Delhi NCR, North India",

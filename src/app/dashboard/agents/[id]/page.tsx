@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma"
 import { getAgentById } from "@/app/actions/agents"
 import { notFound } from "next/navigation"
 import Link from "next/link"

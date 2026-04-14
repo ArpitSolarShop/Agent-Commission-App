@@ -36,7 +36,7 @@ export async function checkDuplicatePhone(phone: string) {
 }
 
 export async function getLeads(filters?: { agentId?: string; status?: string }) {
-  const where: any = {}
+  const where: { status?: string; OR?: Array<{ ownerId: string } | { assignments: { some: { agentId: string } } }> } = {}
   
   if (filters?.agentId) {
     where.OR = [

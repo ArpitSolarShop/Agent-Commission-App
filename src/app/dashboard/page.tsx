@@ -4,15 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
-  Users, 
   Target, 
   TrendingUp, 
-  Wallet,
   Clock,
   CheckCircle2,
-  AlertCircle,
-  BarChart,
-  PieChart
+  BarChart
 } from "lucide-react"
 import Link from "next/link"
 import { DashboardChart } from "@/components/dashboard-chart"
@@ -92,7 +88,7 @@ export default async function DashboardPage() {
           Dashboard
         </h1>
         <p className="text-zinc-500 dark:text-zinc-400">
-          Welcome back, {session?.user?.name}. Here's what's happening.
+          Welcome back, {session?.user?.name}. Here&apos;s what&apos;s happening.
         </p>
       </div>
 

@@ -26,7 +26,7 @@ export function LeadForm({
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [dupStatus, setDupStatus] = useState<{ checking: boolean; result: any }>({ checking: false, result: null })
+  const [dupStatus, setDupStatus] = useState<{ checking: boolean; result: { isDuplicate: boolean; existingLead?: { name: string; owner: { name: string } } } | null }>({ checking: false, result: null })
   const [formError, setFormError] = useState<string | null>(null)
 
   async function handlePhoneBlur(e: React.FocusEvent<HTMLInputElement>) {
@@ -81,8 +81,8 @@ export function LeadForm({
                 <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 dark:bg-red-950/30 rounded-md p-2">
                   <AlertTriangle className="h-4 w-4 flex-shrink-0" />
                   <span>
-                    This phone belongs to <strong>{dupStatus.result.existingLead.name}</strong>{" "}
-                    (owned by {dupStatus.result.existingLead.owner.name})
+                    This phone belongs to <strong>{dupStatus.result.existingLead?.name}</strong>{" "}
+                    (owned by {dupStatus.result.existingLead?.owner?.name})
                   </span>
                 </div>
               )}

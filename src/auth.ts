@@ -27,21 +27,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data
-          const user = await prisma.user.findUnique({ where: { email } })
+          console.log("NextAuth authorize email:", email)
+          try {
+            const user = await prisma.user.findUnique({ where: { email } })
+            console.log("NextAuth user found:", user?.email)
 
-          if (!user) return null
+            if (!user) return null
 
-          const passwordsMatch = await bcrypt.compare(password, user.password)
+            const passwordsMatch = await bcrypt.compare(password, user.password)
+            console.log("NextAuth passwords match:", passwordsMatch)
 
-          if (passwordsMatch) {
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role,
-              agentId: user.agentId,
+            if (passwordsMatch) {
+              return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                agentId: user.agentId,
+              }
             }
+          } catch (error) {
+            console.error("NextAuth prisma error:", error)
           }
+        } else {
+          console.log("NextAuth credentials validation failed", parsedCredentials.error)
         }
         return null
       }

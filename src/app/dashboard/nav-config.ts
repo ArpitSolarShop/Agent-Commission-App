@@ -3,7 +3,6 @@ import {
   Target, 
   Briefcase, 
   Banknote, 
-  Settings, 
   LayoutDashboard,
   PlusCircle
 } from "lucide-react"

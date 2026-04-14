@@ -3,7 +3,6 @@
 import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { updateDealStatus } from "@/app/actions/deals"
-import { Button } from "@/components/ui/button"
 
 const STATUSES = ["OPEN", "IN_PROGRESS", "CLOSED_WON", "CLOSED_LOST"]
 

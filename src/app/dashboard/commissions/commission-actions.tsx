@@ -5,16 +5,14 @@ import { useRouter } from "next/navigation"
 import { approveCommission, disputeCommission, recordPayout } from "@/app/actions/deals"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   CheckCircle2, 
-  XCircle, 
   Banknote, 
-  MessageSquare,
-  ChevronDown
+  MessageSquare
 } from "lucide-react"
 
-export function CommissionActions({ commission, isAdmin }: { commission: any; isAdmin: boolean }) {
+export function CommissionActions({ commission, isAdmin }: { commission: { id: string; status: string; amount: number; disputeNote?: string | null }; isAdmin: boolean }) {
   const [isPending, startTransition] = useTransition()
   const [showDispute, setShowDispute] = useState(false)
   const [showPayout, setShowPayout] = useState(false)

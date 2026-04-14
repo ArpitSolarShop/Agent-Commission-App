@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, Landmark, User, History } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { DealStatusChanger } from "./status-changer"
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -83,7 +83,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               {deal.commissions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-zinc-400">
-                    Commissions will be calculated when the deal is "CLOSED WON".
+                    Commissions will be calculated when the deal is &quot;CLOSED WON&quot;.
                   </TableCell>
                 </TableRow>
               )}

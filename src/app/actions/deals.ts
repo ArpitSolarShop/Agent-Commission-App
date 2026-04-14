@@ -207,7 +207,7 @@ export async function updateDealStatus(dealId: string, status: string) {
   const deal = await prisma.deal.findUnique({ where: { id: dealId } })
   if (!deal) return { error: "Deal not found" }
 
-  const updateData: any = { status }
+  const updateData: { status: string; closedAt?: Date } = { status }
 
   if (status === "CLOSED_WON") {
     updateData.closedAt = new Date()
@@ -300,7 +300,7 @@ export async function recordPayout(commissionId: string, formData: FormData) {
 }
 
 export async function getCommissions(filters?: { agentId?: string; status?: string }) {
-  const where: any = {}
+  const where: { agentId?: string; status?: string } = {}
   if (filters?.agentId) where.agentId = filters.agentId
   if (filters?.status) where.status = filters.status
 

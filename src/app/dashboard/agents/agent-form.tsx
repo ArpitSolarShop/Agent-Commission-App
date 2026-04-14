@@ -81,8 +81,21 @@ export function AgentForm({
               <Input id="name" name="name" required defaultValue={agent?.name ?? ""} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="agentCode">Agent Code *</label>
-              <Input id="agentCode" name="agentCode" required placeholder="AGT-001" defaultValue={agent?.agentCode ?? ""} />
+              <label className="text-sm font-medium" htmlFor="agentCode">
+                Agent Code {isEdit && "*"}
+              </label>
+              <Input 
+                id="agentCode" 
+                name="agentCode" 
+                required={isEdit} 
+                placeholder={isEdit ? "AGT-001" : "Auto-generated"} 
+                defaultValue={agent?.agentCode ?? ""} 
+                readOnly={isEdit}
+                className={!isEdit ? "bg-zinc-50 dark:bg-zinc-900/50" : ""}
+              />
+              {!isEdit && (
+                <p className="text-[10px] text-zinc-500">Leave blank to auto-generate code.</p>
+              )}
             </div>
           </div>
 

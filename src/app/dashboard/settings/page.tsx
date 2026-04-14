@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Shield, User, Bell, Database } from "lucide-react"
+import { Shield, User, Database } from "lucide-react"
 
 export default async function SettingsPage() {
   const session = await auth()
