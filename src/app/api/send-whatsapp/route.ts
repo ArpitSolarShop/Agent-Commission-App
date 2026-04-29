@@ -1,0 +1,126 @@
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const { phone, quotationData } = body;
+
+        console.log("=== WhatsApp API ===");
+        console.log("Phone:", phone);
+
+        if (!phone) {
+            return NextResponse.json({ success: false, message: "Phone required" }, { status: 400 });
+        }
+
+        const apiKey = process.env.DOUBLETICK_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json({ success: false, message: "API key missing" }, { status: 500 });
+        }
+
+        // Clean and format phone - need +91 format
+        const digits = String(phone).replace(/\D/g, "");
+        if (digits.length < 10) {
+            return NextResponse.json({ success: false, message: "Invalid phone" }, { status: 400 });
+        }
+        const last10 = digits.slice(-10);
+        const formattedPhone = `+91${last10}`;
+        console.log("Formatted:", formattedPhone);
+
+        // Build quotation message
+        const {
+            customerName = "Customer",
+            systemSize = 0,
+            panelBrand = "",
+            panelWattage = 0,
+            totalAmount = 0,
+            effectiveCost = 0,
+            centralSubsidy = 0,
+            stateSubsidy = 0
+        } = quotationData || {};
+
+        const message = `🌞 *ARPIT SOLAR SHOP*
+━━━━━━━━━━━━━━━━━
+*Solar Quotation*
+
+Dear *${customerName}*,
+
+📊 *System: ${systemSize} KW*
+• Panels: ${panelBrand} ${panelWattage}Wp
+
+💰 *Total: ₹${new Intl.NumberFormat("en-IN").format(totalAmount)}*
+🎁 Subsidy: ₹${new Intl.NumberFormat("en-IN").format(centralSubsidy + stateSubsidy)}
+✨ *Pay Only: ₹${new Intl.NumberFormat("en-IN").format(effectiveCost)}*
+
+📞 Contact: +91 9005770466
+━━━━━━━━━━━━━━━━━`;
+
+        // Try text message first (works if customer messaged within 24hrs)
+        const textPayload = {
+            messages: [{ to: formattedPhone, content: { text: message } }]
+        };
+
+        console.log("Trying text message...");
+        let res = await fetch("https://public.doubletick.io/whatsapp/message/text", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": apiKey
+            },
+            body: JSON.stringify(textPayload)
+        });
+
+        let data = await res.json();
+        console.log("Text response:", res.status, JSON.stringify(data));
+
+        // If text failed, try template message
+        if (!res.ok) {
+            console.log("Text failed, trying template...");
+
+            // Use the quotation_document template already set up in DoubleTick
+            const templatePayload = {
+                messages: [{
+                    to: formattedPhone,
+                    content: {
+                        templateName: "quotation_document",
+                        language: "en",
+                        templateData: {
+                            body: { placeholders: [] }
+                        }
+                    }
+                }]
+            };
+
+            console.log("Template payload:", JSON.stringify(templatePayload));
+
+            res = await fetch("https://public.doubletick.io/whatsapp/message/template", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": apiKey
+                },
+                body: JSON.stringify(templatePayload)
+            });
+
+            data = await res.json();
+            console.log("Template response:", res.status, JSON.stringify(data));
+        }
+
+        if (!res.ok) {
+            const errMsg = Array.isArray(data.message) ? data.message.join(", ") : (data.message || "Failed to send");
+            return NextResponse.json({
+                success: false,
+                message: errMsg,
+                sentTo: formattedPhone,
+                note: "WhatsApp requires customer to have messaged you first, or you need an approved template."
+            }, { status: res.status });
+        }
+
+        return NextResponse.json({ success: true, message: `Sent to ${formattedPhone}` });
+
+    } catch (err: any) {
+        console.error("Error:", err);
+        return NextResponse.json({ success: false, message: err.message }, { status: 500 });
+    }
+}

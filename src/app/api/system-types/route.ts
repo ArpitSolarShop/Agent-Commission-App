@@ -1,0 +1,49 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { defaultTerms } from '@/lib/companyDetails';
+
+// GET - List all system types
+export async function GET() {
+    try {
+        const data = await prisma.systemType.findMany({
+            orderBy: { createdAt: 'asc' }
+        });
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: any) {
+        console.error('Fetch system types error:', error);
+        // Fallback to defaults if DB fails or is empty
+        const defaultTypes = [
+            { id: 'on-grid', name: 'On-grid', description: 'Grid-tied solar systems connected to utility grid' },
+            { id: 'off-grid', name: 'Off-grid', description: 'Standalone systems with battery storage' },
+            { id: 'hybrid', name: 'Hybrid', description: 'Combined grid-tied and battery backup systems' },
+            { id: 'vfd-drive', name: 'VFD/Drive', description: 'Solar pump drives and VFD systems' },
+        ];
+        return NextResponse.json({ success: true, data: defaultTypes, fromDefaults: true });
+    }
+}
+
+// POST - Create new system type
+export async function POST(request: Request) {
+    try {
+        const body = await request.json();
+        const { name, description } = body;
+
+        if (!name) {
+            return NextResponse.json({ success: false, message: 'Name is required' }, { status: 400 });
+        }
+
+        const data = await prisma.systemType.create({
+            data: {
+                name,
+                description,
+                defaultTerms: (defaultTerms[name as keyof typeof defaultTerms] as string[]) || [],
+            }
+        });
+
+        return NextResponse.json({ success: true, data });
+    } catch (error: any) {
+        console.error('Create system type error:', error);
+        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    }
+}

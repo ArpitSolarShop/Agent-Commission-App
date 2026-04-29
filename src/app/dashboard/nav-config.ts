@@ -4,13 +4,17 @@ import {
   Briefcase, 
   Banknote, 
   LayoutDashboard,
-  PlusCircle
+  PlusCircle,
+  FileText,
+  Package
 } from "lucide-react"
 
 export const getNavItems = (role: string) => {
   if (role === "ADMIN") {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
+      { icon: FileText, label: "Quote", href: "/dashboard/quotation" },
+      { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },
       { icon: Briefcase, label: "Deals", href: "/dashboard/deals" },
@@ -21,6 +25,8 @@ export const getNavItems = (role: string) => {
   if (role === "SALESPERSON") {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
+      { icon: FileText, label: "Quote", href: "/dashboard/quotation" },
+      { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },
       { icon: Briefcase, label: "Deals", href: "/dashboard/deals" },

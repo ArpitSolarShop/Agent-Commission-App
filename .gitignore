@@ -49,3 +49,8 @@ dev.db-journal
 # playwright
 /playwright-report/
 /test-results/
+
+# Agent files
+.gemini/
+scratch/
+

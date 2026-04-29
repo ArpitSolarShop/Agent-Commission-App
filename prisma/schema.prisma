@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["public"]
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -17,9 +19,12 @@ model User {
   email     String   @unique
   password  String   // Hashed with bcrypt
   role      String   // 'ADMIN' | 'SALESPERSON' | 'AGENT'
-  agentId   String?  @unique // Link to Agent profile if role = AGENT or SALESPERSON
+  agentId   String?  @unique @map("agent_id")
   agent     Agent?   @relation(fields: [agentId], references: [id])
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -28,32 +33,33 @@ model User {
 
 model Agent {
   id              String    @id @default(uuid())
-  agentCode       String    @unique  // e.g., "AGT-0042"
+  agentCode       String    @unique @map("agent_code")
   name            String
   phone           String?   
   email           String?   
   type            String    // 'CHANNEL_PARTNER' | 'SALESPERSON' | 'SUB_AGENT'
 
-  // ── Graph Edge: self-referential parent relationship ──
-  parentId        String?
+  parentId        String?   @map("parent_id")
   parent          Agent?    @relation("AgentHierarchy", fields: [parentId], references: [id])
   children        Agent[]   @relation("AgentHierarchy")
 
-  commissionType  String    @default("PERCENTAGE") // 'PERCENTAGE' | 'FIXED_AMOUNT' | 'TIERED'
-  commissionRate  Float     @default(5.0) // % of deal value OR generic amount
-  isActive        Boolean   @default(true) 
+  commissionType  String    @default("PERCENTAGE") @map("commission_type")
+  commissionRate  Float     @default(5.0) @map("commission_rate")
+  isActive        Boolean   @default(true) @map("is_active")
   
   tiers           CommissionTier[] 
 
-  // ── Relations ──
   user            User?
   ownedLeads      Lead[]    @relation("LeadOwner")
   assignments     LeadAssignment[]
   commissions     Commission[]
   payouts         Payout[]  
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("agents")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -67,22 +73,22 @@ model Lead {
   location        String    
   notes           String?   
 
-  // ── Source Control ──
-  sourceType      String    // 'AGENT' | 'SALESPERSON' | 'DIRECT'
-  ownerId         String    // IMMUTABLE
+  sourceType      String    @map("source_type")
+  ownerId         String    @map("owner_id")
   owner           Agent     @relation("LeadOwner", fields: [ownerId], references: [id])
 
-  // ── Pipeline Status ──
   status          String    @default("NEW")
 
-  // ── Relations ──
   contacts        LeadContact[]
   assignments     LeadAssignment[]
   deals           Deal[]
   activities      LeadActivity[] 
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt 
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("leads")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -91,14 +97,16 @@ model Lead {
 
 model LeadContact {
   id          String   @id @default(uuid())
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  phoneNumber String   @unique 
-  isPrimary   Boolean  @default(false)
+  phoneNumber String   @unique @map("phone_number")
+  isPrimary   Boolean  @default(false) @map("is_primary")
   label       String?  
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@index([phoneNumber])
+  @@map("lead_contacts")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -107,13 +115,16 @@ model LeadContact {
 
 model LeadAssignment {
   id          String   @id @default(uuid())
-  leadId      String
+  leadId      String   @map("lead_id")
   lead        Lead     @relation(fields: [leadId], references: [id])
-  agentId     String
+  agentId     String   @map("agent_id")
   agent       Agent    @relation(fields: [agentId], references: [id])
-  assignedBy  String   
-  isActive    Boolean  @default(true) 
-  assignedAt  DateTime @default(now())
+  assignedBy  String   @map("assigned_by")
+  isActive    Boolean  @default(true) @map("is_active")
+  assignedAt  DateTime @default(now()) @map("assigned_at")
+
+  @@map("lead_assignments")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -122,22 +133,24 @@ model LeadAssignment {
 
 model Deal {
   id              String    @id @default(uuid())
-  leadId          String
+  leadId          String    @map("lead_id")
   lead            Lead      @relation(fields: [leadId], references: [id])
-  dealValue       Float
+  dealValue       Float     @map("deal_value")
   category        String?   
   status          String    @default("OPEN") 
-  paymentReceived Boolean   @default(false)
-  paymentDate     DateTime? 
-  closedAt        DateTime?
+  paymentReceived Boolean   @default(false) @map("payment_received")
+  paymentDate     DateTime? @map("payment_date")
+  closedAt        DateTime? @map("closed_at")
   notes           String?   
 
   commissions     Commission[]
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt 
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@index([leadId]) 
+  @@map("deals")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -146,27 +159,29 @@ model Deal {
 
 model Commission {
   id          String   @id @default(uuid())
-  dealId      String
+  dealId      String   @map("deal_id")
   deal        Deal     @relation(fields: [dealId], references: [id])
-  agentId     String
+  agentId     String   @map("agent_id")
   agent       Agent    @relation(fields: [agentId], references: [id])
 
   role           String   // 'OWNER' | 'CLOSER' | 'OVERRIDE'
-  commissionType String   @default("PERCENTAGE") // 'PERCENTAGE' | 'FIXED_AMOUNT'
+  commissionType String   @default("PERCENTAGE") @map("commission_type")
   rate           Float    
   amount         Float    
 
   status      String   @default("PENDING") 
-  disputeNote String?  
+  disputeNote String?  @map("dispute_note")
 
   payout      Payout?  
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt 
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@unique([dealId, agentId, role]) 
   @@index([agentId])               
   @@index([status])                
+  @@map("commissions")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -175,15 +190,18 @@ model Commission {
 
 model Payout {
   id           String     @id @default(uuid())
-  commissionId String     @unique
+  commissionId String     @unique @map("commission_id")
   commission   Commission @relation(fields: [commissionId], references: [id])
-  agentId      String
+  agentId      String     @map("agent_id")
   agent        Agent      @relation(fields: [agentId], references: [id])
   amount       Float
   method       String?    
   reference    String?    
-  paidAt       DateTime   @default(now())
-  paidBy       String     
+  paidAt       DateTime   @default(now()) @map("paid_at")
+  paidBy       String     @map("paid_by")
+
+  @@map("payouts")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -192,14 +210,17 @@ model Payout {
 
 model LeadActivity {
   id        String   @id @default(uuid())
-  leadId    String
+  leadId    String   @map("lead_id")
   lead      Lead     @relation(fields: [leadId], references: [id])
   type      String   
-  oldValue  String?
-  newValue  String?
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
   note      String?
-  byUserId  String
-  createdAt DateTime @default(now())
+  byUserId  String   @map("by_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("lead_activities")
+  @@schema("public")
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -208,11 +229,136 @@ model LeadActivity {
 
 model CommissionTier {
   id              String   @id @default(cuid())
-  agentId         String
+  agentId         String   @map("agent_id")
   agent           Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
   
-  volumeThreshold Float    // If deal volume > this amount...
-  rate            Float    // ...use this specific commission rate.
+  volumeThreshold Float    @map("volume_threshold")
+  rate            Float    
   
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("commission_tiers")
+  @@schema("public")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SOLAR QUOTATION MODELS
+// ─────────────────────────────────────────────────────────────────
+
+model SystemType {
+  id           String    @id @default(uuid())
+  name         String    @unique
+  description  String?
+  defaultTerms String[]  @default([]) @map("default_terms")
+  
+  products     Product[]
+  components   Component[]
+  quotations   Quotation[]
+  
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("system_types")
+  @@schema("public")
+}
+
+model Product {
+  id           String     @id @default(uuid())
+  systemTypeId String     @map("system_type_id")
+  systemType   SystemType @relation(fields: [systemTypeId], references: [id])
+  
+  name         String
+  brand        String?
+  capacityKw   Float?     @map("capacity_kw")
+  phase        Int        @default(1)
+  basePrice    Float      @map("base_price")
+  gstRate      Float      @default(8.9) @map("gst_rate")
+  isActive     Boolean    @default(true) @map("is_active")
+  
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@map("products")
+  @@schema("public")
+}
+
+model IntegratedProduct {
+  id                  String   @id @default(uuid())
+  brand               String
+  systemKw            Float    @map("system_kw")
+  phase               String
+  price               Float
+  inverterCapacityKw  Float    @map("inverter_capacity_kw")
+  moduleWatt          Int      @map("module_watt")
+  moduleType          String?  @map("module_type")
+  noOfModules         Int      @map("no_of_modules")
+  acdbNos             Int      @default(1) @map("acdb_nos")
+  dcdbNos             Int      @default(1) @map("dcdb_nos")
+  earthingRodNos      Int      @default(3) @map("earthing_rod_nos")
+  earthingChemicalNos Int      @default(3) @map("earthing_chemical_nos")
+  acWireBrand         String?  @map("ac_wire_brand")
+  acWireLengthMtr     Int      @default(10) @map("ac_wire_length_mtr")
+  dcWireBrand         String?  @map("dc_wire_brand")
+  dcWireLengthMtr     Int      @default(20) @map("dc_wire_length_mtr")
+  earthingWireBrand   String?  @map("earthing_wire_brand")
+  earthingWireLengthMtr Int    @default(90) @map("earthing_wire_length_mtr")
+  lightingArrestorQty Int      @default(1) @map("lighting_arrestor_qty")
+  
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("integrated_products")
+  @@schema("public")
+}
+
+model Component {
+  id             String     @id @default(uuid())
+  systemTypeId   String?    @map("system_type_id")
+  systemType     SystemType? @relation(fields: [systemTypeId], references: [id])
+  
+  name           String
+  description    String?
+  defaultQuantity String     @map("default_quantity")
+  defaultMake    String     @map("default_make")
+  sortOrder      Int        @default(0) @map("sort_order")
+  isDefault      Boolean    @default(true) @map("is_default")
+  
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  @@map("solar_product_components")
+  @@schema("public")
+}
+
+model Quotation {
+  id              String      @id @default(uuid())
+  quoteNumber     String?     @map("quote_number")
+  customerName    String      @map("customer_name")
+  customerPhone   String?     @map("customer_phone")
+  customerAddress String?     @map("customer_address")
+  customerEmail   String?     @map("customer_email")
+  quoteDate       DateTime    @default(now()) @map("quote_date")
+  
+  systemTypeId    String?     @map("system_type_id")
+  systemType      SystemType? @relation(fields: [systemTypeId], references: [id])
+  
+  capacityKw      Float?      @map("capacity_kw")
+  phase           Int         @default(1)
+  brand           String?
+  basePrice       Float?      @map("base_price")
+  gstRate         Float       @default(8.9) @map("gst_rate")
+  gstAmount       Float?      @map("gst_amount")
+  totalAmount     Float?      @map("total_amount")
+  centralSubsidy  Float       @default(0) @map("central_subsidy")
+  stateSubsidy    Float       @default(0) @map("state_subsidy")
+  
+  terms           Json?       // Array of strings
+  components      Json?       // Array of QuotationComponent objects
+  savingsData     Json?       @map("savings_data")
+  
+  salesperson     String?
+  status          String      @default("draft")
+  pdfUrl          String?     @map("pdf_url")
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  @@map("quotations")
+  @@schema("public")
 }
