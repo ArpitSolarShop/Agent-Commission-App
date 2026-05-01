@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { gstConfig, calculateSavings } from '@/lib/companyDetails';
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 // GET - Get single quotation
 export async function GET(request: Request, context: RouteContext) {
     try {
+        const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+        if (isAuthError(authResult)) return authResult;
+
         const { id } = await context.params;
         
         const data = await prisma.quotation.findUnique({
@@ -32,6 +36,9 @@ export async function GET(request: Request, context: RouteContext) {
 // PUT - Update quotation
 export async function PUT(request: Request, context: RouteContext) {
     try {
+        const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+        if (isAuthError(authResult)) return authResult;
+
         const { id } = await context.params;
         const body = await request.json();
         const {
@@ -102,6 +109,9 @@ export async function PUT(request: Request, context: RouteContext) {
 // DELETE - Delete quotation
 export async function DELETE(request: Request, context: RouteContext) {
     try {
+        const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+        if (isAuthError(authResult)) return authResult;
+
         const { id } = await context.params;
         
         await prisma.quotation.delete({

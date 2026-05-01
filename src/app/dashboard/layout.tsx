@@ -22,14 +22,15 @@ export default async function DashboardLayout({
       
       {/* Main Content */}
       <div className="flex-1 flex flex-col md:pl-64 min-w-0">
-        <header className="h-14 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 backdrop-blur-md dark:bg-zinc-900/80 flex items-center px-4 md:px-6 sticky top-0 z-30 transition-all">
-          <div className="flex items-center gap-2 md:hidden">
-            <div className="bg-primary p-1 rounded-md">
+        {/* Mobile Header — compact app-bar style */}
+        <header className="h-12 md:h-14 border-b border-zinc-100 dark:border-zinc-800/50 bg-white/95 backdrop-blur-xl dark:bg-zinc-900/95 flex items-center px-4 md:px-6 sticky top-0 z-30">
+          <div className="flex items-center gap-2.5 md:hidden">
+            <div className="bg-primary p-1 rounded-lg">
               <div className="w-5 h-5 border-2 border-white rounded-full flex items-center justify-center">
-                <span className="text-[10px] text-white font-bold">K</span>
+                <span className="text-[10px] text-white font-black">K</span>
               </div>
             </div>
-            <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
+            <h2 className="text-sm font-black text-zinc-900 dark:text-zinc-50 tracking-tight">
               Karan Agent Hub
             </h2>
           </div>
@@ -47,7 +48,8 @@ export default async function DashboardLayout({
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 pb-24 md:pb-6">
+        {/* Main content — extra bottom padding for bottom nav on mobile */}
+        <main className="flex-1 p-4 md:p-6 pb-28 md:pb-6">
           {children}
         </main>
 

@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateQuoteNumber, gstConfig, calculateSavings, getSubsidyForCapacity } from '@/lib/companyDetails';
 import { sendKit19Enquiry } from '@/lib/kit19';
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 // GET - List all quotations
 export async function GET(request: Request) {
     try {
+        const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+        if (isAuthError(authResult)) return authResult;
+
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -31,6 +35,9 @@ export async function GET(request: Request) {
 // POST - Create new quotation
 export async function POST(request: Request) {
     try {
+        const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+        if (isAuthError(authResult)) return authResult;
+
         const body = await request.json();
         const {
             customer_name,

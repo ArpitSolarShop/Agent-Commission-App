@@ -21,10 +21,13 @@ import {
   MessageCircle, 
   Mail, 
   PlusCircle,
-  Package
+  Package,
+  ArrowLeft
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useReactToPrint } from "react-to-print";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import {
   companyDetails,
   defaultTerms,
@@ -54,7 +57,6 @@ import {
   AccordionItem, 
   AccordionTrigger 
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Dialog, 
@@ -147,12 +149,15 @@ export default function QuotationBuilder() {
   const [extraWireRate, setExtraWireRate] = useState<number>(50); // Per meter rate
 
   // Components (Bill of Materials)
+  // Components (Bill of Materials)
   const [components, setComponents] = useState<QuotationComponent[]>([]);
   const [terms, setTerms] = useState<string[]>([]);
 
   // Integrated Products
   const [integratedProducts, setIntegratedProducts] = useState<any[]>([]);
   const [loadingIntegrated, setLoadingIntegrated] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
 
   useEffect(() => {
     const fetchIntegrated = async () => {
@@ -173,9 +178,23 @@ export default function QuotationBuilder() {
   // UI State
   const [loading, setLoading] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [dealId, setDealId] = useState<string | null>(null);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setOrigin(window.location.origin);
+      
+      // Auto-fill from URL if coming from a Deal
+      const params = new URLSearchParams(window.location.search);
+      const urlDealId = params.get("dealId");
+      if (urlDealId) {
+        setDealId(urlDealId);
+        const name = params.get("name");
+        const phone = params.get("phone");
+        const email = params.get("email");
+        if (name) setCustomerName(decodeURIComponent(name));
+        if (phone) setCustomerPhone(phone);
+      }
     }
   }, []);
   const [editComponentDialog, setEditComponentDialog] = useState(false);
@@ -449,7 +468,7 @@ export default function QuotationBuilder() {
   const formatCurrency = (amount: number) => new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-50 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-zinc-50 dark:bg-zinc-950 overflow-hidden relative">
       <style jsx global>{`
         @media print {
           .no-print { display: none !important; }
@@ -490,22 +509,27 @@ export default function QuotationBuilder() {
       `}</style>
 
       {/* LEFT EDIT PANEL */}
-      <aside className="no-print w-full md:w-[380px] bg-white border-r border-slate-200 flex flex-col overflow-hidden h-full">
+      <aside className={cn(
+        "no-print w-full md:w-[400px] bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden h-full transition-all duration-300",
+        activeTab === "preview" ? "hidden md:flex" : "flex"
+      )}>
         {/* Header */}
-        <header className="p-4 border-b border-slate-200 bg-slate-900 text-white flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2">
-            <Sun className="w-5 h-5 text-yellow-400" />
-            <h1 className="font-bold text-lg tracking-tight">Quotation Builder</h1>
+        <header className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-900 dark:bg-black text-white flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
+              <Sun className="w-5 h-5 text-zinc-900" />
+            </div>
+            <h1 className="font-black text-lg tracking-tight uppercase italic">Quote Builder</h1>
           </div>
-          <Link href="/dashboard/admin">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-slate-800">
-              <ShieldCheck className="w-5 h-5" />
+          <Link href="/dashboard/deals">
+            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full h-9 w-9">
+              <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
         </header>
 
         {/* Scrollable Form */}
-        <div className="flex-1 overflow-y-auto p-0 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-0 scrollbar-none pb-24 md:pb-0">
           <Accordion type="multiple" defaultValue={["integrated-catalog", "system-type", "customer-details"]} className="w-full">
             
             {/* Integrated Catalog */}
@@ -969,45 +993,37 @@ export default function QuotationBuilder() {
           </Accordion>
         </div>
 
-        {/* Action Buttons */}
-        <footer className="p-4 border-t border-slate-200 bg-white space-y-2 shrink-0">
+        <footer className="hidden md:block p-5 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-3 shrink-0">
           <Button 
-            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold h-10 shadow-sm"
+            className="w-full bg-zinc-900 dark:bg-primary hover:bg-zinc-800 dark:hover:bg-primary/90 text-white font-black h-12 rounded-2xl shadow-lg shadow-zinc-200 dark:shadow-none active:scale-95 transition-all"
             onClick={() => { saveToDatabase(); handlePrint(); }}
           >
             <Printer className="w-4 h-4 mr-2" /> Print Quotation
           </Button>
           <div className="flex gap-2">
             <Button 
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white h-10"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 rounded-xl active:scale-95 transition-all"
               onClick={handleSendWhatsApp}
               disabled={loading}
             >
               <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
             </Button>
             <Button 
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white h-10"
+              className="flex-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-bold h-11 rounded-xl active:scale-95 transition-all"
               onClick={handleSendEmail}
               disabled={loading}
             >
               <Mail className="w-4 h-4 mr-2" /> Email
             </Button>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-10 w-10 text-slate-400 hover:text-red-500" onClick={handleReset}>
-                    <RotateCcw className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Reset Form</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
         </footer>
       </aside>
 
       {/* CENTER PREVIEW */}
-      <main className="print-wrapper flex-1 w-full overflow-auto p-4 md:p-6 flex justify-center bg-slate-200">
+      <main className={cn(
+        "print-wrapper flex-1 w-full overflow-auto p-4 md:p-8 flex justify-center bg-zinc-100 dark:bg-zinc-950 transition-all duration-300",
+        activeTab === "edit" ? "hidden md:flex" : "flex"
+      )}>
         <div ref={printRef} className="print-page w-[210mm] min-h-[297mm] p-[15mm] bg-white shadow-2xl font-sans text-[11px] text-slate-800 box-border">
           {/* Header */}
           <div className="flex justify-between items-start border-b-4 border-yellow-500 pb-6 mb-6">
@@ -1304,6 +1320,36 @@ export default function QuotationBuilder() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* MOBILE TAB NAV */}
+      <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] no-print">
+        <div className="bg-zinc-900/90 dark:bg-black/90 backdrop-blur-xl rounded-2xl p-1 border border-white/10 shadow-2xl flex items-center gap-1">
+          <button 
+            onClick={() => setActiveTab("edit")}
+            className={cn(
+              "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95",
+              activeTab === "edit" ? "bg-white text-zinc-900" : "text-zinc-400 hover:text-zinc-200"
+            )}
+          >
+            Editor
+          </button>
+          <button 
+            onClick={() => setActiveTab("preview")}
+            className={cn(
+              "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95",
+              activeTab === "preview" ? "bg-white text-zinc-900" : "text-zinc-400 hover:text-zinc-200"
+            )}
+          >
+            Preview
+          </button>
+          <div className="w-[1px] h-4 bg-white/10 mx-1" />
+          <button 
+            onClick={() => { saveToDatabase(); handlePrint(); }}
+            className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-zinc-900 active:scale-90 transition-all shadow-lg shadow-primary/20"
+          >
+            <Printer className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

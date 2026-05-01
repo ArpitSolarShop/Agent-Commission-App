@@ -109,4 +109,34 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* ── Native App Feel ── */
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text selection on interactive elements (app-like) */
+  button, a, nav, [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Smooth scrolling everywhere */
+  * {
+    scroll-behavior: smooth;
+  }
+
+  /* Bigger touch targets for inputs on mobile */
+  @media (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important; /* Prevents iOS zoom on focus */
+    }
+  }
 }

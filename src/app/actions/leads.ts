@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/auth"
+import { getSessionOrThrow, requireLeadAccess, hasRole, getSubtreeAgentIds } from "@/lib/authorization"
 
 const LeadSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -13,6 +13,7 @@ const LeadSchema = z.object({
   sourceType: z.enum(["AGENT", "SALESPERSON", "DIRECT"]),
   ownerId: z.string().min(1, "Owner is required"),
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
+  customerType: z.enum(["RESIDENTIAL", "COMMERCIAL"]).optional().or(z.literal("")),
 })
 
 // ── Duplicate Detection ──
@@ -36,9 +37,24 @@ export async function checkDuplicatePhone(phone: string) {
 }
 
 export async function getLeads(filters?: { agentId?: string; status?: string }) {
-  const where: { status?: string; OR?: Array<{ ownerId: string } | { assignments: { some: { agentId: string } } }> } = {}
+  const user = await getSessionOrThrow()
+  const where: any = {}
   
-  if (filters?.agentId) {
+  if (!hasRole(user, "ADMIN")) {
+    // Non-admins only see leads in their subtree or explicitly assigned
+    const agentId = user.agentId
+    if (agentId) {
+      const subtreeIds = await getSubtreeAgentIds(agentId)
+      where.OR = [
+        { ownerId: { in: subtreeIds } },
+        { assignments: { some: { agentId } } }
+      ]
+    } else {
+      // No agent linked, can only see explicitly assigned leads if any (should be none)
+      where.id = "none" 
+    }
+  } else if (filters?.agentId) {
+    // Admin filtering by a specific agent
     where.OR = [
       { ownerId: filters.agentId },
       { assignments: { some: { agentId: filters.agentId } } }
@@ -60,9 +76,8 @@ export async function getLeads(filters?: { agentId?: string; status?: string }) 
 }
 
 export async function getLeadById(id: string) {
-  const session = await auth()
-  const role = session?.user?.role
-  const agentId = session?.user?.agentId
+  const user = await getSessionOrThrow()
+  await requireLeadAccess(user, id, "OWNER", "ASSIGNED", "ANCESTOR")
 
   const lead = await prisma.lead.findUnique({
     where: { id },
@@ -81,19 +96,11 @@ export async function getLeadById(id: string) {
 
   if (!lead) return null
 
-  // ReBAC logic: Only Admin, Owner, or Assigned Agents can view
-  if (role !== "ADMIN" && agentId) {
-    const isOwner = lead.ownerId === agentId
-    const isAssigned = lead.assignments.some(a => a.agentId === agentId)
-    if (!isOwner && !isAssigned) {
-      throw new Error("Unauthorized: You do not have permission to view this lead.")
-    }
-  }
-
   return lead
 }
 
 export async function createLead(formData: FormData) {
+  const user = await getSessionOrThrow()
   const raw = Object.fromEntries(formData)
   const parsed = LeadSchema.safeParse(raw)
 
@@ -101,7 +108,7 @@ export async function createLead(formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, email, location, notes, sourceType, ownerId, phoneNumber } = parsed.data
+  const { name, email, location, notes, sourceType, ownerId, phoneNumber, customerType } = parsed.data
 
   // Check duplicate phone
   const dupCheck = await checkDuplicatePhone(phoneNumber)
@@ -119,6 +126,7 @@ export async function createLead(formData: FormData) {
       email: email || null,
       location,
       notes: notes || null,
+      customerType: customerType || null,
       sourceType,
       ownerId,
       contacts: {
@@ -165,6 +173,8 @@ export async function createLead(formData: FormData) {
 }
 
 export async function updateLeadStatus(leadId: string, status: string, userId: string) {
+  const user = await getSessionOrThrow()
+  await requireLeadAccess(user, leadId, "OWNER", "ASSIGNED", "ANCESTOR")
   const lead = await prisma.lead.findUnique({ where: { id: leadId } })
   if (!lead) return { error: "Lead not found" }
 
@@ -191,6 +201,8 @@ export async function updateLeadStatus(leadId: string, status: string, userId: s
 }
 
 export async function addLeadContact(leadId: string, formData: FormData) {
+  const user = await getSessionOrThrow()
+  await requireLeadAccess(user, leadId, "OWNER", "ASSIGNED", "ANCESTOR")
   const phoneNumber = formData.get("phoneNumber") as string
   const label = formData.get("label") as string
 
@@ -212,6 +224,8 @@ export async function addLeadContact(leadId: string, formData: FormData) {
 }
 
 export async function assignLead(leadId: string, agentId: string, assignedBy: string) {
+  const user = await getSessionOrThrow()
+  await requireLeadAccess(user, leadId, "OWNER", "ANCESTOR") // Only owners and ancestors can assign
   await prisma.leadAssignment.create({
     data: { leadId, agentId, assignedBy },
   })

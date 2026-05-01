@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { defaultTerms } from '@/lib/companyDetails';
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 // GET - List all system types
 export async function GET() {
     try {
+        const authResult = await requireApiAuth();
+        if (isAuthError(authResult)) return authResult;
+
         const data = await prisma.systemType.findMany({
             orderBy: { createdAt: 'asc' }
         });
@@ -26,6 +30,9 @@ export async function GET() {
 // POST - Create new system type
 export async function POST(request: Request) {
     try {
+        const authResult = await requireApiAuth(["ADMIN"]);
+        if (isAuthError(authResult)) return authResult;
+
         const body = await request.json();
         const { name, description } = body;
 

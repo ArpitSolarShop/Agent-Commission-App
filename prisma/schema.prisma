@@ -14,16 +14,63 @@ datasource db {
 // ─────────────────────────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String   // Hashed with bcrypt
-  role      String   // 'ADMIN' | 'SALESPERSON' | 'AGENT'
-  agentId   String?  @unique @map("agent_id")
-  agent     Agent?   @relation(fields: [agentId], references: [id])
-  createdAt DateTime @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  password      String?   // Hashed with bcrypt (optional for OAuth)
+  role          String    @default("AGENT") // 'ADMIN' | 'SALESPERSON' | 'AGENT'
+  agentId       String?   @unique @map("agent_id")
+  agent         Agent?    @relation(fields: [agentId], references: [id])
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  accounts      Account[]
+  sessions      Session[]
 
   @@map("users")
+  @@schema("public")
+}
+
+model Account {
+  id                 String  @id @default(uuid())
+  userId             String  @map("user_id")
+  type               String
+  provider           String
+  providerAccountId  String  @map("provider_account_id")
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+  @@schema("public")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@schema("public")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
   @@schema("public")
 }
 
@@ -54,6 +101,7 @@ model Agent {
   assignments     LeadAssignment[]
   commissions     Commission[]
   payouts         Payout[]  
+  referredRequests RecruitmentRequest[] @relation("AgentReferrals")
 
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -72,6 +120,7 @@ model Lead {
   email           String?   
   location        String    
   notes           String?   
+  customerType    String?   @map("customer_type") // e.g., "RESIDENTIAL", "COMMERCIAL"
 
   sourceType      String    @map("source_type")
   ownerId         String    @map("owner_id")
@@ -135,13 +184,23 @@ model Deal {
   id              String    @id @default(uuid())
   leadId          String    @map("lead_id")
   lead            Lead      @relation(fields: [leadId], references: [id])
-  dealValue       Float     @map("deal_value")
+  name            String?   // Deal Name (e.g., "Sharma 5kW Project")
+  dealValue       Float     @map("deal_value") // Final agreed amount
+  originalPrice   Float?    @map("original_price")
+  discount        Float?    @default(0)
   category        String?   
-  status          String    @default("OPEN") 
+  status          String    @default("NEW_QUALIFIED") // NEW_QUALIFIED | SITE_VISIT_DONE | PROPOSAL_SENT | NEGOTIATION | CLOSED_WON | CLOSED_LOST
+  expectedCloseDate DateTime? @map("expected_close_date")
   paymentReceived Boolean   @default(false) @map("payment_received")
   paymentDate     DateTime? @map("payment_date")
   closedAt        DateTime? @map("closed_at")
   notes           String?   
+  
+  // Document links
+  quotationUrl    String?   @map("quotation_url")
+  proposalUrl     String?   @map("proposal_url")
+  agreementUrl    String?   @map("agreement_url")
+  surveyReportUrl String?   @map("survey_report_url")
 
   commissions     Commission[]
 
@@ -360,5 +419,30 @@ model Quotation {
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
   @@map("quotations")
+  @@schema("public")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// RECRUITMENT REQUESTS
+// ─────────────────────────────────────────────────────────────────
+
+model RecruitmentRequest {
+  id            String    @id @default(uuid())
+  name          String
+  email         String
+  phone         String
+  location      String?
+  requestedRole String    @map("requested_role") // 'SALESPERSON' | 'SUB_AGENT' | 'CHANNEL_PARTNER'
+  status        String    @default("PENDING") // 'PENDING' | 'APPROVED' | 'REJECTED'
+  
+  referrerId    String?   @map("referrer_id")
+  referrer      Agent?    @relation("AgentReferrals", fields: [referrerId], references: [id])
+  
+  notes         String?
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("recruitment_requests")
   @@schema("public")
 }

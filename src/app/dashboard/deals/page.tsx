@@ -7,8 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Eye, Briefcase } from "lucide-react"
 
 const statusVariant: Record<string, "default" | "success" | "destructive" | "outline" | "warning"> = {
-  OPEN: "outline",
-  IN_PROGRESS: "warning",
+  NEW_QUALIFIED: "outline",
+  SITE_VISIT_DONE: "default",
+  PROPOSAL_SENT: "warning",
+  NEGOTIATION: "warning",
   CLOSED_WON: "success",
   CLOSED_LOST: "destructive",
 }

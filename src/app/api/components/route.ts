@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { defaultComponents } from '@/lib/companyDetails';
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 // GET - List all components (optionally filter by system_type)
 export async function GET(request: Request) {
     try {
+        const authResult = await requireApiAuth();
+        if (isAuthError(authResult)) return authResult;
+
         const { searchParams } = new URL(request.url);
         const systemTypeId = searchParams.get('system_type_id');
         const systemTypeName = searchParams.get('system_type');
@@ -42,6 +46,9 @@ export async function GET(request: Request) {
 // POST - Create new component
 export async function POST(request: Request) {
     try {
+        const authResult = await requireApiAuth(["ADMIN"]);
+        if (isAuthError(authResult)) return authResult;
+
         const body = await request.json();
         const { system_type_id, name, description, default_quantity, default_make, sort_order, is_default } = body;
 
@@ -71,6 +78,9 @@ export async function POST(request: Request) {
 // PUT - Update component
 export async function PUT(request: Request) {
     try {
+        const authResult = await requireApiAuth(["ADMIN"]);
+        if (isAuthError(authResult)) return authResult;
+
         const body = await request.json();
         const { id, name, description, default_quantity, default_make, sort_order, is_default } = body;
 
@@ -86,7 +96,7 @@ export async function PUT(request: Request) {
                 defaultQuantity: default_quantity,
                 defaultMake: default_make,
                 sortOrder: sort_order ? parseInt(sort_order) : undefined,
-                isDefault,
+                isDefault: is_default,
             }
         });
 
@@ -100,6 +110,9 @@ export async function PUT(request: Request) {
 // DELETE - Delete component
 export async function DELETE(request: Request) {
     try {
+        const authResult = await requireApiAuth(["ADMIN"]);
+        if (isAuthError(authResult)) return authResult;
+
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

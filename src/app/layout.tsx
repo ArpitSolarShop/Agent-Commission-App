@@ -24,6 +24,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Karan Agent Hub | Commission & Lead Management",
   description: "Enterprise-grade multi-tier agent commission and lead attribution tracking system.",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

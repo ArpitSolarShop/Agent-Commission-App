@@ -58,13 +58,6 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
-      title: "Create Quotation",
-      description: "Build a new solar proposal",
-      icon: <PlusCircle className="w-8 h-8" />,
-      color: "text-emerald-600 bg-emerald-50",
-      href: "/dashboard/quotation",
-    },
-    {
       title: "Manage Products",
       description: "Update solar catalog",
       icon: <Package className="w-8 h-8" />,
@@ -104,7 +97,7 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Admin Console</h1>
             <p className="text-slate-500 font-medium">Monitoring and configuring {companyDetails.name}</p>
           </div>
-          <Link href="/dashboard/quotation">
+          <Link href="/dashboard">
             <Button variant="outline" className="rounded-xl font-bold gap-2 shadow-sm border-slate-200">
               <Home className="w-4 h-4" />
               Main App

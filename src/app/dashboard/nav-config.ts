@@ -6,26 +6,28 @@ import {
   LayoutDashboard,
   PlusCircle,
   FileText,
-  Package
+  Package,
+  Settings,
+  UserPlus
 } from "lucide-react"
 
 export const getNavItems = (role: string) => {
   if (role === "ADMIN") {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
-      { icon: FileText, label: "Quote", href: "/dashboard/quotation" },
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },
       { icon: Briefcase, label: "Deals", href: "/dashboard/deals" },
       { icon: Banknote, label: "Cash", href: "/dashboard/commissions" },
+      { icon: UserPlus, label: "Hiring", href: "/dashboard/admin/recruitment" },
+      { icon: Settings, label: "Admin", href: "/dashboard/admin/products" },
     ]
   }
   
   if (role === "SALESPERSON") {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
-      { icon: FileText, label: "Quote", href: "/dashboard/quotation" },
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },

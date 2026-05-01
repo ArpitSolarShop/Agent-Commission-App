@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
     try {
+        const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+        if (isAuthError(authResult)) return authResult;
+
         const body = await request.json();
         const { phone, quotationData } = body;
 

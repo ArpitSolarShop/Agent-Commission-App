@@ -8,12 +8,15 @@ import { generateQuoteHtml } from '../../../lib/quoteTemplate';
 import { defaultComponents } from '../../../data/components';
 import { GST_RATE } from '../../../data/priceList';
 
-export const runtime = 'nodejs';
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 // Supabase client will be created lazily inside handlers after env validation
 
 export async function POST(request: Request) {
   try {
+    const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+    if (isAuthError(authResult)) return authResult;
+
     const quoteData = await request.json();
 
     // Basic input validation (minimal schema without external deps)

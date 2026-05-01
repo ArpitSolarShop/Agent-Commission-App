@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { sendKit19Enquiry } from "@/lib/kit19";
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 export async function POST(request: Request) {
   try {
+    const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+    if (isAuthError(authResult)) return authResult;
+
     const body = await request.json();
     
     // Call the kit19 service we created

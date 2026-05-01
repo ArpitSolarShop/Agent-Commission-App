@@ -3,11 +3,15 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/auth"
+import { getSessionOrThrow, requireDealAccess, requireLeadAccess, hasRole, getSubtreeAgentIds, requireRole } from "@/lib/authorization"
 
 const DealSchema = z.object({
   leadId: z.string().min(1),
+  name: z.string().optional().or(z.literal("")),
   dealValue: z.coerce.number().positive("Deal value must be positive"),
+  originalPrice: z.coerce.number().optional().or(z.literal("")),
+  discount: z.coerce.number().optional().or(z.literal("")),
+  expectedCloseDate: z.string().optional().or(z.literal("")),
   category: z.string().optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
 })
@@ -131,7 +135,26 @@ async function calculateCommissions(dealId: string) {
 }
 
 export async function getDeals() {
+  const user = await getSessionOrThrow()
+  const where: any = {}
+  
+  if (!hasRole(user, "ADMIN")) {
+    const agentId = user.agentId
+    if (agentId) {
+      const subtreeIds = await getSubtreeAgentIds(agentId)
+      where.lead = {
+        OR: [
+          { ownerId: { in: subtreeIds } },
+          { assignments: { some: { agentId } } }
+        ]
+      }
+    } else {
+      where.id = "none"
+    }
+  }
+
   return prisma.deal.findMany({
+    where,
     include: {
       lead: {
         select: { name: true, owner: { select: { name: true, agentCode: true } } },
@@ -143,9 +166,8 @@ export async function getDeals() {
 }
 
 export async function getDealById(id: string) {
-  const session = await auth()
-  const role = session?.user?.role
-  const agentId = session?.user?.agentId
+  const user = await getSessionOrThrow()
+  await requireDealAccess(user, id, "OWNER", "ASSIGNED", "ANCESTOR")
 
   const deal = await prisma.deal.findUnique({
     where: { id },
@@ -169,16 +191,11 @@ export async function getDealById(id: string) {
 
   if (!deal) return null
 
-  if (role !== "ADMIN" && agentId) {
-    const isOwner = deal.lead.ownerId === agentId
-    const isAssigned = deal.lead.assignments.some(a => a.agentId === agentId)
-    if (!isOwner && !isAssigned) throw new Error("Unauthorized to access this deal")
-  }
-
   return deal
 }
 
 export async function createDeal(formData: FormData) {
+  const user = await getSessionOrThrow()
   const raw = Object.fromEntries(formData)
   const parsed = DealSchema.safeParse(raw)
 
@@ -186,15 +203,29 @@ export async function createDeal(formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { leadId, dealValue, category, notes } = parsed.data
+  const { leadId, dealValue, category, notes, name, originalPrice, discount, expectedCloseDate } = parsed.data
 
-  const deal = await prisma.deal.create({
+  await requireLeadAccess(user, leadId, "OWNER", "ASSIGNED", "ANCESTOR")
+
+  let dealName = name
+  if (!dealName) {
+    const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { name: true } })
+    if (lead) {
+      dealName = `${lead.name}'s Project`
+    }
+  }
+
+  const deal = await (prisma.deal as any).create({
     data: {
       leadId,
+      name: dealName || "New Project",
       dealValue,
+      originalPrice: originalPrice ? Number(originalPrice) : null,
+      discount: discount ? Number(discount) : 0,
+      expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : null,
       category: category || null,
       notes: notes || null,
-      status: "OPEN",
+      status: "NEW_QUALIFIED",
     },
   })
 
@@ -203,7 +234,23 @@ export async function createDeal(formData: FormData) {
   return { success: true, dealId: deal.id }
 }
 
+export async function updateDealDocuments(dealId: string, docs: { quotationUrl?: string; proposalUrl?: string; agreementUrl?: string; surveyReportUrl?: string }) {
+  const user = await getSessionOrThrow()
+  await requireDealAccess(user, dealId, "OWNER", "ASSIGNED", "ANCESTOR")
+
+  await (prisma.deal as any).update({
+    where: { id: dealId },
+    data: docs,
+  })
+
+  revalidatePath(`/dashboard/deals/${dealId}`)
+  return { success: true }
+}
+
 export async function updateDealStatus(dealId: string, status: string) {
+  const user = await getSessionOrThrow()
+  await requireDealAccess(user, dealId, "OWNER", "ASSIGNED", "ANCESTOR")
+
   const deal = await prisma.deal.findUnique({ where: { id: dealId } })
   if (!deal) return { error: "Deal not found" }
 
@@ -244,8 +291,8 @@ export async function updateDealStatus(dealId: string, status: string) {
 }
 
 export async function approveCommission(commissionId: string) {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can approve commissions")
+  const user = await getSessionOrThrow()
+  requireRole(user, "ADMIN")
 
   await prisma.commission.update({
     where: { id: commissionId },
@@ -256,8 +303,8 @@ export async function approveCommission(commissionId: string) {
 }
 
 export async function disputeCommission(commissionId: string, note: string) {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can dispute commissions")
+  const user = await getSessionOrThrow()
+  requireRole(user, "ADMIN")
 
   await prisma.commission.update({
     where: { id: commissionId },
@@ -268,8 +315,8 @@ export async function disputeCommission(commissionId: string, note: string) {
 }
 
 export async function recordPayout(commissionId: string, formData: FormData) {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can record payouts")
+  const user = await getSessionOrThrow()
+  requireRole(user, "ADMIN")
 
   const method = formData.get("method") as string
   const reference = formData.get("reference") as string
@@ -286,7 +333,7 @@ export async function recordPayout(commissionId: string, formData: FormData) {
         amount: commission.amount,
         method: method || null,
         reference: reference || null,
-        paidBy: paidBy || session.user.name || "admin",
+        paidBy: paidBy || user.name || "admin",
       },
     }),
     prisma.commission.update({
@@ -300,8 +347,16 @@ export async function recordPayout(commissionId: string, formData: FormData) {
 }
 
 export async function getCommissions(filters?: { agentId?: string; status?: string }) {
+  const user = await getSessionOrThrow()
   const where: { agentId?: string; status?: string } = {}
-  if (filters?.agentId) where.agentId = filters.agentId
+  
+  if (!hasRole(user, "ADMIN")) {
+    // Non-admins can only see their own commissions
+    where.agentId = user.agentId
+  } else if (filters?.agentId) {
+    where.agentId = filters.agentId
+  }
+  
   if (filters?.status) where.status = filters.status
 
   return prisma.commission.findMany({

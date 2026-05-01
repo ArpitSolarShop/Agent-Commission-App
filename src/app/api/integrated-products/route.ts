@@ -1,22 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { integratedProductSchema } from '@/lib/schemas/integratedProduct';
+import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
+    // RBAC: Only ADMIN can create integrated products
+    const authResult = await requireApiAuth(["ADMIN"]);
+    if (isAuthError(authResult)) return authResult;
+
     const body = await request.json();
     const parsed = integratedProductSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ success: false, errors: parsed.error.format() }, { status: 400 });
     }
 
-    // Map snake_case to camelCase for Prisma if necessary, 
-    // but the schema.prisma I created uses camelCase for the model fields
-    // and the incoming body likely uses the names from the Zod schema.
-    // Let's check the mapping.
-    
     const data = await prisma.integratedProduct.create({
       data: {
         brand: parsed.data.brand,
@@ -50,6 +50,10 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
+    // RBAC: Authenticated users (ADMIN + SALESPERSON) can view
+    const authResult = await requireApiAuth(["ADMIN", "SALESPERSON"]);
+    if (isAuthError(authResult)) return authResult;
+
     const data = await prisma.integratedProduct.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100

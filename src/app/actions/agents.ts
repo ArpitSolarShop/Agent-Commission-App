@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { auth } from "@/auth"
+import { getSessionOrThrow, requireRole, hasRole } from "@/lib/authorization"
 
 const AgentSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -18,7 +18,14 @@ const AgentSchema = z.object({
 })
 
 export async function getAgents() {
+  const user = await getSessionOrThrow()
+  
+  const where = hasRole(user, "ADMIN") 
+    ? {} 
+    : { parentId: user.agentId }
+
   return prisma.agent.findMany({
+    where,
     include: {
       parent: { select: { name: true, agentCode: true } },
       _count: { select: { children: true, ownedLeads: true, commissions: true } },
@@ -44,9 +51,9 @@ async function getNextAgentCode() {
 }
 
 export async function getAgentById(id: string) {
-  const session = await auth()
-  const role = session?.user?.role
-  const agentId = session?.user?.agentId
+  const user = await getSessionOrThrow()
+  const role = user.role
+  const agentId = user.agentId
 
   const agent = await prisma.agent.findUnique({
     where: { id },
@@ -92,8 +99,8 @@ export async function getAgentHierarchy() {
 }
 
 export async function createAgent(formData: FormData) {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can create agents")
+  const user = await getSessionOrThrow()
+  requireRole(user, "ADMIN")
 
   const raw = Object.fromEntries(formData)
   const parsed = AgentSchema.safeParse(raw)
@@ -144,8 +151,8 @@ export async function createAgent(formData: FormData) {
 }
 
 export async function updateAgent(id: string, formData: FormData) {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can update agents")
+  const user = await getSessionOrThrow()
+  requireRole(user, "ADMIN")
 
   const raw = Object.fromEntries(formData)
   const parsed = AgentSchema.safeParse(raw)
@@ -196,8 +203,8 @@ export async function updateAgent(id: string, formData: FormData) {
 }
 
 export async function toggleAgentStatus(id: string) {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") throw new Error("Only Administrators can toggle agent status")
+  const user = await getSessionOrThrow()
+  requireRole(user, "ADMIN")
 
   const agent = await prisma.agent.findUnique({ where: { id } })
   if (!agent) return { error: "Agent not found" }
