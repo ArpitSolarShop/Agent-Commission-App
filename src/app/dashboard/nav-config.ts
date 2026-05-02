@@ -8,13 +8,15 @@ import {
   FileText,
   Package,
   Settings,
-  UserPlus
+  UserPlus,
+  BarChart3
 } from "lucide-react"
 
 export const getNavItems = (role: string) => {
   if (role === "ADMIN") {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
+      { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },
@@ -28,6 +30,7 @@ export const getNavItems = (role: string) => {
   if (role === "SALESPERSON") {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
+      { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },
