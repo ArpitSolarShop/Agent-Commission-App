@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌞 Karan Agent Hub
 
-## Getting Started
+The **Karan Agent Hub** is a professional solar sales and commission management platform built with Next.js, Prisma, and Tailwind CSS. It empowers solar sales networks with automated lead management, hierarchical agent structures, and professional quotation generation.
 
-First, run the development server:
+## 🚀 Key Features
+- **Agent Hierarchy:** Multi-level parent-child relationship management with interactive network visualization.
+- **Lead & Deal Tracking:** Full pipeline management from initial contact to closed-won deals.
+- **Automated Quotations:** Dynamic Bill of Materials (BOM) generation for On-grid, Off-grid, and Hybrid solar systems.
+- **Commission Management:** Automated calculation of fixed and percentage-based payouts across the agent network.
+- **Multitenant Dashboards:** Dedicated experiences for Admins, Salespersons, and Agents.
 
+## 📖 Documentation
+- **[User Guide](./USER_GUIDE.md):** A comprehensive manual for end-users on how to manage leads, quotes, and agents.
+- **[Testing Guide](./TESTING_GUIDE.md):** Technical documentation covering Unit, Integration, and E2E testing strategies.
+
+## 🛠️ Technology Stack
+- **Framework:** Next.js 15 (App Router)
+- **Database:** PostgreSQL (Supabase) + Prisma ORM
+- **UI/UX:** Tailwind CSS + Radix UI + Shadcn UI
+- **Testing:** Playwright (E2E), Vitest (Unit/Integration), Cypress
+- **Integrations:** Kit19 CRM, DoubleTick WhatsApp API
+
+## 🚦 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL database (or Supabase instance)
+
+### Installation
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npx playwright install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Setup
+Create a `.env` file based on the provided template and fill in your database and API credentials.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Development
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Testing
+```bash
+# Run unit tests
+npm run test:unit
 
-## Learn More
+# Run E2E tests
+npm run test:e2e
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 License
+Internal proprietary software for Karan Solar.

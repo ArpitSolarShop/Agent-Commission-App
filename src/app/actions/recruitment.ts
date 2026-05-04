@@ -11,9 +11,17 @@ const ApplySchema = z.object({
   email: z.string().email("Invalid email"),
   phone: z.string().min(10, "Phone number is too short"),
   location: z.string().optional(),
-  requestedRole: z.enum(["SALESPERSON", "SUB_AGENT", "CHANNEL_PARTNER"]),
+  requestedRole: z.enum(["SALESPERSON", "SUB_SALES_AGENT", "SALES_AGENT"]),
   referrerCode: z.string().optional(),
   notes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if ((data.requestedRole === "SALES_AGENT" || data.requestedRole === "SUB_SALES_AGENT") && !data.referrerCode) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Referrer Code (Parent) is required for Sales Agents and Sub Sales Agents",
+      path: ["referrerCode"],
+    })
+  }
 })
 
 export async function submitApplication(formData: FormData) {

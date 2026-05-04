@@ -15,6 +15,7 @@ export function JoinForm() {
   const [isPending, setIsPending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [role, setRole] = useState("SUB_SALES_AGENT")
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -25,9 +26,10 @@ export function JoinForm() {
     
     try {
       const res = await submitApplication(formData)
-      if (res.error) {
-        if (typeof res.error === "string") setError(res.error)
-        else if (res.error.general) setError(res.error.general[0])
+      if ("error" in res && res.error) {
+        const errorVal = res.error as any;
+        if (typeof errorVal === "string") setError(errorVal)
+        else if (errorVal.general) setError(errorVal.general[0])
         else setError("Please check all fields and try again.")
       } else if (res.success) {
         setSuccess(true)
@@ -80,24 +82,30 @@ export function JoinForm() {
           <select 
             id="requestedRole" 
             name="requestedRole"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
             className="flex h-9 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:focus-visible:ring-zinc-300"
             required
           >
-            <option value="SUB_AGENT">Sales Agent</option>
-            <option value="CHANNEL_PARTNER">Channel Partner</option>
             <option value="SALESPERSON">Direct Salesperson (Internal)</option>
+            <option value="SALES_AGENT">Sales Agent</option>
+            <option value="SUB_SALES_AGENT">Sub Sales Agent</option>
           </select>
         </div>
 
-        {referralCode && (
+        {referralCode ? (
           <div className="space-y-2">
             <Label htmlFor="referrerCode">Referral Code</Label>
             <Input id="referrerCode" name="referrerCode" defaultValue={referralCode} readOnly className="bg-zinc-50 dark:bg-zinc-900 text-zinc-500" />
             <p className="text-xs text-zinc-500">You were invited by this agent.</p>
           </div>
-        )}
-        
-        {!referralCode && (
+        ) : (role === "SALES_AGENT" || role === "SUB_SALES_AGENT") ? (
+          <div className="space-y-2">
+            <Label htmlFor="referrerCode">Referrer Code *</Label>
+            <Input id="referrerCode" name="referrerCode" required placeholder="e.g. AGT-0001" />
+            <p className="text-xs text-zinc-500">A parent agent code is required for this role.</p>
+          </div>
+        ) : (
           <div className="space-y-2 hidden">
              <Input id="referrerCode" name="referrerCode" defaultValue="" />
           </div>

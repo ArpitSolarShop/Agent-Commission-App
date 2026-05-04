@@ -10,11 +10,19 @@ const AgentSchema = z.object({
   agentCode: z.string().optional().or(z.literal("")),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
-  type: z.enum(["CHANNEL_PARTNER", "SALESPERSON", "SUB_AGENT"]),
+  type: z.enum(["SALES_AGENT", "SALESPERSON", "SUB_SALES_AGENT"]),
   parentId: z.string().optional().or(z.literal("")),
   commissionType: z.enum(["PERCENTAGE", "FIXED_AMOUNT", "TIERED"]).default("PERCENTAGE"),
   commissionRate: z.coerce.number().min(0),
   tiersJson: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if ((data.type === "SALES_AGENT" || data.type === "SUB_SALES_AGENT") && !data.parentId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Parent Agent is required for Sales Agents and Sub Sales Agents",
+      path: ["parentId"],
+    })
+  }
 })
 
 export async function getAgents() {

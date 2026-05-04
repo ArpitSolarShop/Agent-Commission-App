@@ -15,8 +15,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
 
   const typeColor: Record<string, string> = {
     SALESPERSON: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    CHANNEL_PARTNER: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-    SUB_AGENT: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400",
+    SALES_AGENT: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    SUB_SALES_AGENT: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400",
   }
 
   return (

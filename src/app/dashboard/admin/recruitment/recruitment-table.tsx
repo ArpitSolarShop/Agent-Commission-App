@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,14 @@ export function RecruitmentTable({ applications }: { applications: any[] }) {
   const [isApproving, setIsApproving] = useState(false)
   const [isRejecting, setIsRejecting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [defaultAgentCode, setDefaultAgentCode] = useState("")
+
+
+  useEffect(() => {
+    if (isOpen) {
+      setDefaultAgentCode(`AGT-${Math.floor(1000 + Math.random() * 9000)}`)
+    }
+  }, [isOpen])
 
   async function handleApprove(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -141,7 +149,7 @@ export function RecruitmentTable({ applications }: { applications: any[] }) {
                 <Input 
                   id="agentCode" 
                   name="agentCode" 
-                  defaultValue={`AGT-${Math.floor(1000 + Math.random() * 9000)}`} 
+                  defaultValue={defaultAgentCode} 
                   required 
                 />
               </div>

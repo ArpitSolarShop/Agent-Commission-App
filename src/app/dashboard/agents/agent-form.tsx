@@ -39,6 +39,7 @@ export function AgentForm({
   const [isPending, startTransition] = useTransition()
   const isEdit = !!agent
   const [commType, setCommType] = React.useState(agent?.commissionType ?? "PERCENTAGE")
+  const [agentType, setAgentType] = React.useState(agent?.type ?? "SUB_SALES_AGENT")
   const [tiers, setTiers] = React.useState<{ volumeThreshold: number; rate: number }[]>(
     agent?.tiers ? agent.tiers.map(t => ({ volumeThreshold: t.volumeThreshold, rate: t.rate })) : []
   )
@@ -117,12 +118,13 @@ export function AgentForm({
                 id="type"
                 name="type"
                 required
-                defaultValue={agent?.type ?? "SUB_AGENT"}
+                value={agentType}
+                onChange={(e) => setAgentType(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="SALESPERSON">Salesperson</option>
-                <option value="CHANNEL_PARTNER">Channel Partner</option>
-                <option value="SUB_AGENT">Sub Agent</option>
+                <option value="SALES_AGENT">Sales Agent</option>
+                <option value="SUB_SALES_AGENT">Sub Sales Agent</option>
               </select>
             </div>
           </div>
@@ -204,10 +206,13 @@ export function AgentForm({
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="parentId">Parent Agent</label>
+            <label className="text-sm font-medium" htmlFor="parentId">
+              Parent Agent {(agentType === "SALES_AGENT" || agentType === "SUB_SALES_AGENT") && "*"}
+            </label>
             <select
               id="parentId"
               name="parentId"
+              required={agentType === "SALES_AGENT" || agentType === "SUB_SALES_AGENT"}
               defaultValue={agent?.parentId ?? ""}
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >

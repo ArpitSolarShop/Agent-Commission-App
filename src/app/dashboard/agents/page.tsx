@@ -21,8 +21,8 @@ export default async function AgentsPage() {
 
   const typeColor: Record<string, string> = {
     SALESPERSON: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    CHANNEL_PARTNER: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-    SUB_AGENT: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400",
+    SALES_AGENT: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    SUB_SALES_AGENT: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400",
   }
 
   return (
@@ -82,7 +82,7 @@ export default async function AgentsPage() {
                   <TableCell className="font-bold text-zinc-900 dark:text-zinc-100">{agent.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tight">
-                      {agent.type.replace("_", " ")}
+                      {agent.type.replace(/_/g, " ")}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-zinc-500 text-xs font-semibold">{agent.parent?.name ?? "—"}</TableCell>
@@ -130,7 +130,7 @@ export default async function AgentsPage() {
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-[10px] text-primary font-black uppercase tracking-widest">{agent.agentCode}</span>
                       <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${typeColor[agent.type] || "bg-zinc-100 text-zinc-600"}`}>
-                        {agent.type.replace("_", " ")}
+                        {agent.type.replace(/_/g, " ")}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-2">

@@ -24,8 +24,8 @@ function TreeNode({ agent, childrenMap }: { agent: AgentNode; childrenMap: Map<s
 
   const typeColors: Record<string, string> = {
     SALESPERSON: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-    CHANNEL_PARTNER: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
-    SUB_AGENT: "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300",
+    SALES_AGENT: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+    SUB_SALES_AGENT: "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300",
   }
 
   return (

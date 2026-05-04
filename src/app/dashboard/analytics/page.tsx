@@ -60,10 +60,11 @@ export default async function AnalyticsDashboard() {
     return {
       id: agent.id,
       name: agent.name,
+      type: agent.type,
       totalEarned,
       dealsClosed
     }
-  }).sort((a, b) => b.totalEarned - a.totalEarned).slice(0, 5)
+  }).sort((a, b) => b.totalEarned - a.totalEarned)
 
   // 3. Monthly Revenue & Commission (Last 6 months)
   // For simplicity, we'll fetch all CLOSED_WON deals and PAID commissions from the last 6 months
@@ -236,7 +237,7 @@ export default async function AnalyticsDashboard() {
           {/* Leaderboard */}
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden">
             <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800/50 flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Top Agents</span>
+              <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Agent Sales Report</span>
               <Users className="h-4 w-4 text-amber-500" />
             </div>
             <AgentLeaderboard data={leaderboardData} />

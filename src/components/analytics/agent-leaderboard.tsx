@@ -2,6 +2,7 @@
 interface AgentData {
   id: string
   name: string
+  type: string
   totalEarned: number
   dealsClosed: number
 }
@@ -20,7 +21,7 @@ export function AgentLeaderboard({ data }: AgentLeaderboardProps) {
   }
 
   return (
-    <div className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
+    <div className="divide-y divide-zinc-50 dark:divide-zinc-800/50 max-h-[500px] overflow-y-auto">
       {data.map((agent, index) => (
         <div key={agent.id} className="flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-4">
@@ -40,9 +41,14 @@ export function AgentLeaderboard({ data }: AgentLeaderboardProps) {
             </div>
             <div>
               <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{agent.name}</p>
-              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
-                {agent.dealsClosed} DEALS CLOSED
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
+                  {agent.dealsClosed} DEALS
+                </p>
+                <span className="text-[8px] px-1.5 py-0.5 rounded-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-500 uppercase font-bold tracking-widest">
+                  {agent.type.replace(/_/g, ' ')}
+                </span>
+              </div>
             </div>
           </div>
           <div className="text-right">

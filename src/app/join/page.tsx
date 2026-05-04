@@ -17,7 +17,7 @@ export default function JoinPage() {
           </h1>
           <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400">
             Partner with us to distribute premium solar solutions. 
-            Apply below and we'll get you set up.
+            Apply below and we&apos;ll get you set up.
           </p>
         </div>
         <Suspense fallback={<div className="text-center py-12">Loading application form...</div>}>

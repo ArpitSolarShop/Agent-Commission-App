@@ -84,7 +84,7 @@ model Agent {
   name            String
   phone           String?   
   email           String?   
-  type            String    // 'CHANNEL_PARTNER' | 'SALESPERSON' | 'SUB_AGENT'
+  type            String    // 'SALES_AGENT' | 'SALESPERSON' | 'SUB_SALES_AGENT'
 
   parentId        String?   @map("parent_id")
   parent          Agent?    @relation("AgentHierarchy", fields: [parentId], references: [id])
@@ -432,7 +432,7 @@ model RecruitmentRequest {
   email         String
   phone         String
   location      String?
-  requestedRole String    @map("requested_role") // 'SALESPERSON' | 'SUB_AGENT' | 'CHANNEL_PARTNER'
+  requestedRole String    @map("requested_role") // 'SALESPERSON' | 'SUB_SALES_AGENT' | 'SALES_AGENT'
   status        String    @default("PENDING") // 'PENDING' | 'APPROVED' | 'REJECTED'
   
   referrerId    String?   @map("referrer_id")

@@ -31,14 +31,14 @@ interface Point {
 
 const TYPE_COLORS: Record<string, string> = {
   SALESPERSON: "#3b82f6", // blue-500
-  CHANNEL_PARTNER: "#a855f7", // purple-500
-  SUB_AGENT: "#71717a", // zinc-500
+  SALES_AGENT: "#a855f7", // purple-500
+  SUB_SALES_AGENT: "#71717a", // zinc-500
 }
 
 const TYPE_BG: Record<string, string> = {
   SALESPERSON: "#eff6ff", // blue-50
-  CHANNEL_PARTNER: "#faf5ff", // purple-50
-  SUB_AGENT: "#f4f4f5", // zinc-50
+  SALES_AGENT: "#faf5ff", // purple-50
+  SUB_SALES_AGENT: "#f4f4f5", // zinc-50
 }
 
 const NODE_WIDTH = 200

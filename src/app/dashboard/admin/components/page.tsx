@@ -81,7 +81,6 @@ export default function ComponentsAdminPage() {
 
     // Load components for selected system type
     useEffect(() => {
-        setLoading(true);
         const defaults = defaultComponents[selectedSystemType as keyof typeof defaultComponents];
         if (defaults) {
             setComponents(
@@ -97,7 +96,6 @@ export default function ComponentsAdminPage() {
         } else {
             setComponents([]);
         }
-        setLoading(false);
     }, [selectedSystemType]);
 
     // Handle dialog open

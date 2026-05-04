@@ -5,11 +5,11 @@ import {
   Banknote, 
   LayoutDashboard,
   PlusCircle,
-  FileText,
   Package,
   Settings,
   UserPlus,
-  BarChart3
+  BarChart3,
+  Network
 } from "lucide-react"
 
 export const getNavItems = (role: string) => {
@@ -19,6 +19,7 @@ export const getNavItems = (role: string) => {
       { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
+      { icon: Network, label: "Network", href: "/dashboard/agents/hierarchy" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },
       { icon: Briefcase, label: "Deals", href: "/dashboard/deals" },
       { icon: Banknote, label: "Cash", href: "/dashboard/commissions" },
@@ -33,6 +34,7 @@ export const getNavItems = (role: string) => {
       { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
+      { icon: Network, label: "Network", href: "/dashboard/agents/hierarchy" },
       { icon: Target, label: "Leads", href: "/dashboard/leads" },
       { icon: Briefcase, label: "Deals", href: "/dashboard/deals" },
       { icon: Banknote, label: "Cash", href: "/dashboard/commissions" },
