@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getSessionOrThrow, requireDealAccess, requireLeadAccess, hasRole, getSubtreeAgentIds, requireRole } from "@/lib/authorization"
+import { defineAbilityFor } from "@/lib/authz/ability"
+import { accessibleBy } from "@casl/prisma"
 
 const DealSchema = z.object({
   leadId: z.string().min(1),
@@ -33,7 +35,7 @@ async function getActiveRate(agentId: string, baseRate: number, commissionType: 
     _sum: { dealValue: true }
   })
   
-  const currentVolume = (volumeAgg._sum.dealValue || 0) + newDealValue
+  const currentVolume = (Number(volumeAgg._sum.dealValue) || 0) + newDealValue
   
   const tiers = await prisma.commissionTier.findMany({
     where: { agentId },
@@ -41,7 +43,7 @@ async function getActiveRate(agentId: string, baseRate: number, commissionType: 
   })
   
   for (const tier of tiers) {
-    if (currentVolume >= tier.volumeThreshold) return tier.rate
+    if (currentVolume >= Number(tier.volumeThreshold)) return Number(tier.rate)
   }
   
   return baseRate
@@ -60,7 +62,7 @@ async function calculateCommissions(dealId: string) {
 
   // 1. OWNER commission — the agent who submitted the lead
   const owner = deal.lead.owner
-  const ownerRate = await getActiveRate(owner.id, owner.commissionRate, owner.commissionType, deal.dealValue)
+  const ownerRate = await getActiveRate(owner.id, Number(owner.commissionRate), owner.commissionType, Number(deal.dealValue))
 
   commissions.push({
     agentId: owner.id,
@@ -69,7 +71,7 @@ async function calculateCommissions(dealId: string) {
     rate: ownerRate,
     amount: owner.commissionType === "FIXED_AMOUNT" 
       ? ownerRate 
-      : (deal.dealValue * ownerRate) / 100,
+      : (Number(deal.dealValue) * ownerRate) / 100,
   })
   visited.add(owner.id)
 
@@ -87,7 +89,7 @@ async function calculateCommissions(dealId: string) {
 
     visited.add(parentAgent.id)
 
-    const parentRate = await getActiveRate(parentAgent.id, parentAgent.commissionRate, parentAgent.commissionType, deal.dealValue)
+    const parentRate = await getActiveRate(parentAgent.id, Number(parentAgent.commissionRate), parentAgent.commissionType, Number(deal.dealValue))
 
     commissions.push({
       agentId: parentAgent.id,
@@ -96,7 +98,7 @@ async function calculateCommissions(dealId: string) {
       rate: parentRate,
       amount: parentAgent.commissionType === "FIXED_AMOUNT"
         ? parentRate
-        : (deal.dealValue * parentRate) / 100,
+        : (Number(deal.dealValue) * parentRate) / 100,
     })
 
     currentAgentId = parentAgent.parentId
@@ -136,25 +138,10 @@ async function calculateCommissions(dealId: string) {
 
 export async function getDeals() {
   const user = await getSessionOrThrow()
-  const where: any = {}
-  
-  if (!hasRole(user, "ADMIN")) {
-    const agentId = user.agentId
-    if (agentId) {
-      const subtreeIds = await getSubtreeAgentIds(agentId)
-      where.lead = {
-        OR: [
-          { ownerId: { in: subtreeIds } },
-          { assignments: { some: { agentId } } }
-        ]
-      }
-    } else {
-      where.id = "none"
-    }
-  }
+  const ability = await defineAbilityFor(user)
 
   return prisma.deal.findMany({
-    where,
+    where: accessibleBy(ability).Deal,
     include: {
       lead: {
         select: { name: true, owner: { select: { name: true, agentCode: true } } },
@@ -330,7 +317,7 @@ export async function recordPayout(commissionId: string, formData: FormData) {
       data: {
         commissionId,
         agentId: commission.agentId,
-        amount: commission.amount,
+        amount: Number(commission.amount),
         method: method || null,
         reference: reference || null,
         paidBy: paidBy || user.name || "admin",

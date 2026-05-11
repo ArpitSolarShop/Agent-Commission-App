@@ -14,6 +14,7 @@ const AgentSchema = z.object({
   parentId: z.string().optional().or(z.literal("")),
   commissionType: z.enum(["PERCENTAGE", "FIXED_AMOUNT", "TIERED"]).default("PERCENTAGE"),
   commissionRate: z.coerce.number().min(0),
+  baseSalary: z.coerce.number().optional().or(z.literal("")),
   tiersJson: z.string().optional(),
 }).superRefine((data, ctx) => {
   if ((data.type === "SALES_AGENT" || data.type === "SUB_SALES_AGENT") && !data.parentId) {
@@ -90,7 +91,7 @@ export async function getAgentById(id: string) {
 }
 
 export async function getAgentHierarchy() {
-  return prisma.agent.findMany({
+  const agents = await prisma.agent.findMany({
     select: {
       id: true,
       name: true,
@@ -99,11 +100,18 @@ export async function getAgentHierarchy() {
       parentId: true,
       commissionType: true,
       commissionRate: true,
+      baseSalary: true,
       isActive: true,
       _count: { select: { ownedLeads: true, children: true } },
     },
     orderBy: { name: "asc" },
   })
+
+  return agents.map(agent => ({
+    ...agent,
+    commissionRate: Number(agent.commissionRate),
+    baseSalary: agent.baseSalary ? Number(agent.baseSalary) : null,
+  }))
 }
 
 export async function createAgent(formData: FormData) {
@@ -117,7 +125,7 @@ export async function createAgent(formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, agentCode: providedCode, email, phone, type, parentId, commissionType, commissionRate, tiersJson } = parsed.data
+  const { name, agentCode: providedCode, email, phone, type, parentId, commissionType, commissionRate, baseSalary, tiersJson } = parsed.data
 
   let agentCode = providedCode
   if (!agentCode) {
@@ -145,6 +153,7 @@ export async function createAgent(formData: FormData) {
       parentId: parentId || null,
       commissionType,
       commissionRate,
+      baseSalary: baseSalary ? Number(baseSalary) : null,
       tiers: commissionType === "TIERED" && parsedTiers.length > 0 ? {
         create: parsedTiers.map((t: { volumeThreshold: number | string; rate: number | string }) => ({
           volumeThreshold: Number(t.volumeThreshold),
@@ -169,7 +178,7 @@ export async function updateAgent(id: string, formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate, tiersJson } = parsed.data
+  const { name, agentCode, email, phone, type, parentId, commissionType, commissionRate, baseSalary, tiersJson } = parsed.data
 
   let parsedTiers = []
   if (commissionType === "TIERED" && tiersJson) {
@@ -195,6 +204,7 @@ export async function updateAgent(id: string, formData: FormData) {
       parentId: parentId || null,
       commissionType,
       commissionRate,
+      baseSalary: baseSalary ? Number(baseSalary) : null,
       tiers: commissionType === "TIERED" ? {
         deleteMany: {},
         create: parsedTiers.map((t: { volumeThreshold: number | string; rate: number | string }) => ({
