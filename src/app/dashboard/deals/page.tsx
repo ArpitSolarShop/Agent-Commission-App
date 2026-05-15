@@ -54,7 +54,7 @@ export default async function DealsPage() {
                   <TableRow key={deal.id}>
                     <TableCell className="font-bold text-zinc-900 dark:text-zinc-100">{deal.lead.name}</TableCell>
                     <TableCell className="text-zinc-500 text-xs font-semibold uppercase tracking-tight">{deal.lead.owner.name}</TableCell>
-                    <TableCell className="font-black text-sm">₹{deal.dealValue.toLocaleString("en-IN")}</TableCell>
+                    <TableCell className="font-black text-sm">₹{Number(deal.dealValue).toLocaleString("en-IN")}</TableCell>
                     <TableCell>
                       <Badge variant={statusVariant[deal.status] ?? "outline"} className="text-[10px] font-black uppercase text-center">
                         {deal.status.replace("_", " ")}
@@ -100,7 +100,7 @@ export default async function DealsPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-zinc-50 dark:border-zinc-800/50">
                     <div className="flex flex-col">
                       <span className="text-[9px] font-black text-zinc-400 tracking-widest uppercase">DEAL AMOUNT</span>
-                      <span className="text-base font-black text-zinc-900 dark:text-zinc-200 italic">₹{deal.dealValue.toLocaleString("en-IN")}</span>
+                      <span className="text-base font-black text-zinc-900 dark:text-zinc-200 italic">₹{Number(deal.dealValue).toLocaleString("en-IN")}</span>
                     </div>
                     <div className="flex flex-col items-end">
                        <span className="text-[9px] font-black text-zinc-400 tracking-widest uppercase">COMMISSIONS</span>

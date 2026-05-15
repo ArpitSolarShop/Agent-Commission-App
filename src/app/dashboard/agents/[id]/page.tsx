@@ -11,7 +11,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
 
   if (!agent) notFound()
 
-  const totalCommission = agent.commissions.reduce((sum, c) => sum + c.amount, 0)
+  const totalCommission = agent.commissions.reduce((sum, c) => sum + Number(c.amount), 0)
 
   const typeColor: Record<string, string> = {
     SALESPERSON: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -70,7 +70,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-white/50">Rate</p>
             <p className="text-sm font-black mt-1 truncate">
-               {agent.commissionType === "PERCENTAGE" ? `${agent.commissionRate}%` : `₹${agent.commissionRate}`}
+               {agent.commissionType === "PERCENTAGE" ? `${Number(agent.commissionRate)}%` : `₹${Number(agent.commissionRate)}`}
             </p>
           </div>
           <div>
@@ -151,10 +151,10 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
                   <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Deal Reward</p>
                   <div className="flex items-center gap-2">
                     <IndianRupee className="h-3 w-3 text-emerald-600" />
-                    <span className="text-base font-black text-zinc-900 dark:text-zinc-100 italic">₹{c.amount.toLocaleString("en-IN")}</span>
+                    <span className="text-base font-black text-zinc-900 dark:text-zinc-100 italic">₹{Number(c.amount).toLocaleString("en-IN")}</span>
                   </div>
                   <p className="text-[10px] text-zinc-500 font-bold uppercase mt-1 tracking-tighter">
-                     {c.role} · {c.commissionType === "PERCENTAGE" ? `${c.rate}%` : `₹${c.rate}`}
+                     {c.role} · {c.commissionType === "PERCENTAGE" ? `${Number(c.rate)}%` : `₹${Number(c.rate)}`}
                   </p>
                 </div>
                 <div className="text-right">

@@ -439,12 +439,37 @@ model RecruitmentRequest {
   
   referrerId    String?   @map("referrer_id")
   referrer      Agent?    @relation("AgentReferrals", fields: [referrerId], references: [id])
-  
+
+  inviteTokenId String?   @unique @map("invite_token_id")
+  inviteToken   InviteToken? @relation(fields: [inviteTokenId], references: [id])
+
   notes         String?
   
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("recruitment_requests")
+  @@schema("public")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// INVITE TOKENS (for on-the-go agent hiring links)
+// ─────────────────────────────────────────────────────────────────
+
+model InviteToken {
+  id               String    @id @default(uuid())
+  token            String    @unique
+  createdByUserId  String    @map("created_by_user_id")
+  createdByAgentId String?   @map("created_by_agent_id")  // Salesperson / agent who generated it
+  roleForInvitee   String    @map("role_for_invitee")      // Pre-set role for the new agent
+  commissionRate   Decimal   @default(5.0) @db.Decimal(10, 2) @map("commission_rate")
+  expiresAt        DateTime  @map("expires_at")
+  usedAt           DateTime? @map("used_at")               // Null = not yet used
+
+  application      RecruitmentRequest?                     // Filled once someone uses the link
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@map("invite_tokens")
   @@schema("public")
 }

@@ -3,7 +3,6 @@ import { promises as fs } from 'fs';
 import path from 'path';
 // Use dynamic imports to support serverless-compatible Chromium in production
 import { createClient } from '@supabase/supabase-js';
-import { sendWhatsAppMessage } from '../../../lib/whatsapp';
 import { generateQuoteHtml } from '../../../lib/quoteTemplate';
 import { defaultComponents } from '../../../data/components';
 import { GST_RATE } from '../../../data/priceList';
@@ -180,11 +179,7 @@ export async function POST(request: Request) {
       }
     } catch { }
 
-    if (!quoteData.skipWhatsApp) {
-      await sendWhatsAppMessage(quoteData.customerInfo.phone, pdfUrl);
-    }
-
-    return NextResponse.json({ message: 'Quotation sent successfully!', url: urlData.publicUrl, totals: { subtotal, gstAmount, total, discount, grandTotal } });
+    return NextResponse.json({ message: 'Quotation generated successfully!', url: urlData.publicUrl, totals: { subtotal, gstAmount, total, discount, grandTotal } });
 
   } catch (error: any) {
     console.error('API Route Error:', error);
@@ -198,8 +193,6 @@ export async function GET() {
     if (!process.env.SUPABASE_URL) missingEnv.push('SUPABASE_URL');
     if (!process.env.SUPABASE_KEY) missingEnv.push('SUPABASE_KEY');
     if (!process.env.SUPABASE_BUCKET) missingEnv.push('SUPABASE_BUCKET');
-    if (!process.env.DOUBLETICK_API_KEY) missingEnv.push('DOUBLETICK_API_KEY');
-    if (!process.env.DOUBLETICK_SENDER_PHONE) missingEnv.push('DOUBLETICK_SENDER_PHONE');
     const ok = missingEnv.length === 0;
     return NextResponse.json({ ok, missingEnv });
   } catch (e: any) {

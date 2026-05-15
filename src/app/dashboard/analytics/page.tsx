@@ -51,7 +51,7 @@ export default async function AnalyticsDashboard() {
   })
 
   const leaderboardData = agents.map(agent => {
-    const totalEarned = agent.commissions.reduce((sum, c) => sum + c.amount, 0)
+    const totalEarned = agent.commissions.reduce((sum, c) => sum + Number(c.amount), 0)
     let dealsClosed = 0
     agent.ownedLeads.forEach(lead => {
       dealsClosed += lead.deals.length
@@ -102,7 +102,7 @@ export default async function AnalyticsDashboard() {
     if (deal.closedAt) {
       const key = `${monthNames[deal.closedAt.getMonth()]} ${deal.closedAt.getFullYear().toString().slice(2)}`
       if (monthlyData[key]) {
-        monthlyData[key].revenue += (deal.dealValue || 0)
+        monthlyData[key].revenue += Number(deal.dealValue || 0)
       }
     }
   })
@@ -110,7 +110,7 @@ export default async function AnalyticsDashboard() {
   recentCommissions.forEach(comm => {
     const key = `${monthNames[comm.createdAt.getMonth()]} ${comm.createdAt.getFullYear().toString().slice(2)}`
     if (monthlyData[key]) {
-      monthlyData[key].commission += comm.amount
+      monthlyData[key].commission += Number(comm.amount)
     }
   })
 
@@ -126,13 +126,13 @@ export default async function AnalyticsDashboard() {
     _sum: { dealValue: true },
     where: { status: { notIn: ["CLOSED_WON", "CLOSED_LOST"] } }
   })
-  const pipelineValue = activePipelineDeals._sum.dealValue || 0
+  const pipelineValue = Number(activePipelineDeals._sum.dealValue || 0)
 
   const wonDealsAgg = await prisma.deal.aggregate({
     _avg: { dealValue: true },
     where: { status: "CLOSED_WON" }
   })
-  const avgDealSize = wonDealsAgg._avg.dealValue || 0
+  const avgDealSize = Number(wonDealsAgg._avg.dealValue || 0)
 
   const closedDealsStats = await prisma.deal.findMany({
     where: { status: "CLOSED_WON", closedAt: { not: null } },

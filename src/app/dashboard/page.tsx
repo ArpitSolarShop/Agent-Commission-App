@@ -8,7 +8,12 @@ import {
   Clock,
   CheckCircle2,
   BarChart,
-  ChevronRight
+  ChevronRight,
+  Wallet,
+  Sparkles,
+  ArrowUpRight,
+  Plus,
+  FileText
 } from "lucide-react"
 import Link from "next/link"
 import { DashboardChart } from "@/components/dashboard-chart"
@@ -27,28 +32,34 @@ export default async function DashboardPage() {
   if (role === "ADMIN") {
     totalLeads = await prisma.lead.count()
     activeDeals = await prisma.deal.count({ where: { status: "OPEN" } })
-    totalEarned = (await prisma.commission.aggregate({
+    const resEarned = await prisma.commission.aggregate({
       _sum: { amount: true },
       where: { status: "PAID" }
-    }))._sum.amount || 0
-    pendingCommissions = (await prisma.commission.aggregate({
+    })
+    totalEarned = resEarned._sum.amount ? Number(resEarned._sum.amount) : 0
+
+    const resPending = await prisma.commission.aggregate({
       _sum: { amount: true },
       where: { status: { in: ["PENDING", "APPROVED"] } }
-    }))._sum.amount || 0
+    })
+    pendingCommissions = resPending._sum.amount ? Number(resPending._sum.amount) : 0
   } else if (agentId) {
     // For Agents/Salespeople
     totalLeads = await prisma.lead.count({ where: { ownerId: agentId } })
     activeDeals = await prisma.deal.count({ 
-      where: { lead: { ownerId: agentId }, status: "OPEN" } 
+      where: { lead: { ownerId: agentId }, status: { notIn: ["CLOSED_LOST", "CLOSED_WON"] } } 
     })
-    totalEarned = (await prisma.commission.aggregate({
+    const resEarned = await prisma.commission.aggregate({
       _sum: { amount: true },
       where: { agentId, status: "PAID" }
-    }))._sum.amount || 0
-    pendingCommissions = (await prisma.commission.aggregate({
+    })
+    totalEarned = resEarned._sum.amount ? Number(resEarned._sum.amount) : 0
+
+    const resPending = await prisma.commission.aggregate({
       _sum: { amount: true },
       where: { agentId, status: { in: ["PENDING", "APPROVED"] } }
-    }))._sum.amount || 0
+    })
+    pendingCommissions = resPending._sum.amount ? Number(resPending._sum.amount) : 0
   }
 
   const recentLeads = await prisma.lead.findMany({
@@ -87,6 +98,195 @@ export default async function DashboardPage() {
     { label: "Earned", value: `₹${totalEarned > 1000 ? `${(totalEarned/1000).toFixed(1)}k` : totalEarned}`, icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" },
     { label: "Pending", value: `₹${pendingCommissions > 1000 ? `${(pendingCommissions/1000).toFixed(1)}k` : pendingCommissions}`, icon: Clock, color: "text-amber-600 bg-amber-50 dark:bg-amber-900/20" },
   ]
+
+  // If agent / salesperson, show the beautiful Minimalist Wallet Portal
+  if (role !== "ADMIN") {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto pb-12">
+        {/* Top Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-widest">Agent Portal</p>
+            <h1 className="text-xl md:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 mt-0.5">
+              Hello, {session?.user?.name || "Partner"} ✨
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/quotation">
+              <Button size="sm" className="rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-all font-bold">
+                <Plus className="w-4 h-4 mr-1" /> New Quote
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Happiness Wallet Card ── */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-emerald-950 text-white p-6 md:p-8 shadow-2xl shadow-emerald-950/20 border border-zinc-700/50">
+          {/* Decorative background glow */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col space-y-6">
+            {/* Header of Wallet */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[10px] font-black tracking-wider uppercase text-zinc-200">Arpit Solar Wallet</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Active Partner</span>
+              </div>
+            </div>
+
+            {/* Balance display */}
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
+                Total Happiness Earned <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+              </p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl md:text-5xl font-black tracking-tight text-white">
+                  ₹{totalEarned.toLocaleString("en-IN")}
+                </span>
+                <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  100% Payout
+                </span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-[1px] bg-white/10 w-full" />
+
+            {/* Footer stats & Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-6">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Pending Approval</p>
+                  <p className="text-lg font-black text-amber-400">₹{pendingCommissions.toLocaleString("en-IN")}</p>
+                </div>
+                <div className="w-[1px] h-8 bg-white/10" />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Active Deals</p>
+                  <p className="text-lg font-black text-zinc-200">{activeDeals}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link href="/dashboard/commissions">
+                  <Button variant="secondary" size="sm" className="rounded-xl font-bold bg-white/10 text-white hover:bg-white/20 border border-white/10 backdrop-blur-md transition-all">
+                    Ledger History
+                  </Button>
+                </Link>
+                <Link href="/dashboard/commissions">
+                  <Button size="sm" className="rounded-xl font-bold bg-emerald-500 hover:bg-emerald-600 text-zinc-950 transition-all shadow-lg shadow-emerald-500/30">
+                    Claim Payout <ArrowUpRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Minimalist Grid: Quick Access & Recent Leads ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Quick Access Actions */}
+          <div className="space-y-3 md:col-span-1">
+            <div className="px-1 flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Quick Actions</span>
+            </div>
+            <div className="space-y-2">
+              <Link href="/dashboard/leads/new" className="block">
+                <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 hover:border-primary/40 hover:shadow-md transition-all group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Add New Lead</p>
+                      <p className="text-[10px] text-zinc-500">Record a new potential customer</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </Link>
+
+              <Link href="/dashboard/quotation" className="block">
+                <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 hover:border-primary/40 hover:shadow-md transition-all group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Price Calculator</p>
+                      <p className="text-[10px] text-zinc-500">Instant solar quotation builder</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </Link>
+
+              <Link href="/dashboard/deals" className="block">
+                <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 hover:border-primary/40 hover:shadow-md transition-all group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Deals Pipeline</p>
+                      <p className="text-[10px] text-zinc-500">Track and close your sales</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Minimalist Recent Leads List */}
+          <div className="md:col-span-2 space-y-3">
+            <div className="px-1 flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Recent Customers</span>
+              <Link href="/dashboard/leads">
+                <button className="text-[10px] font-bold text-primary hover:underline">VIEW ALL</button>
+              </Link>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden shadow-sm">
+              {recentLeads.length > 0 ? (
+                <div className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
+                  {recentLeads.map((lead) => (
+                    <Link key={lead.id} href={`/dashboard/leads/${lead.id}`}>
+                      <div className="flex items-center justify-between px-5 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-xs font-black text-zinc-700 dark:text-zinc-300 flex-shrink-0">
+                            {lead.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{lead.name}</p>
+                            <p className="text-[10px] text-zinc-500 uppercase font-medium">{lead.location || "N/A"}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2.5 flex-shrink-0">
+                          <Badge variant="outline" className="text-[9px] uppercase tracking-wider font-bold h-5 px-2">
+                            {lead.status}
+                          </Badge>
+                          <ChevronRight className="h-4 w-4 text-zinc-300" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-zinc-400 text-xs font-medium">
+                  No customers recorded yet. Click &quot;Add New Lead&quot; to begin!
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5 max-w-4xl mx-auto">
@@ -172,7 +372,7 @@ export default async function DashboardPage() {
             {recentCommissions.map((comm) => (
               <div key={comm.id} className="flex items-center justify-between px-5 py-3.5">
                 <div>
-                  <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">+ ₹{comm.amount.toLocaleString("en-IN")}</p>
+                  <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">+ ₹{Number(comm.amount).toLocaleString("en-IN")}</p>
                   <p className="text-[10px] text-zinc-500 uppercase">{comm.deal.lead.name}</p>
                 </div>
                 <Badge
@@ -191,3 +391,4 @@ export default async function DashboardPage() {
     </div>
   )
 }
+

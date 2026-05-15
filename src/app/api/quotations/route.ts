@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateQuoteNumber, gstConfig, calculateSavings, getSubsidyForCapacity } from '@/lib/companyDetails';
-import { sendKit19Enquiry } from '@/lib/kit19';
 import { requireApiAuth, isAuthError } from '@/lib/api-auth';
 
 // GET - List all quotations
@@ -121,19 +120,6 @@ export async function POST(request: Request) {
                 status: 'draft',
             }
         });
-
-        // Send Enquiry to Kit19
-        try {
-            await sendKit19Enquiry({
-                name: customer_name,
-                phone: customer_phone || "",
-                email: customer_email || "",
-                address: customer_address || "",
-                systemKw: capacity_kw || "",
-            });
-        } catch (e) {
-            console.warn('Kit19 enquiry failed:', e);
-        }
 
         return NextResponse.json({ success: true, data });
     } catch (error: any) {

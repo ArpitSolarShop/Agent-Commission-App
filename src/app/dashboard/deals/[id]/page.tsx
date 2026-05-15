@@ -49,7 +49,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Final Deal Value</p>
-            <p className="text-3xl md:text-4xl font-black tracking-tight mt-1">₹{deal.dealValue.toLocaleString("en-IN")}</p>
+            <p className="text-3xl md:text-4xl font-black tracking-tight mt-1">₹{Number(deal.dealValue).toLocaleString("en-IN")}</p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
             <IndianRupee className="h-7 w-7 text-emerald-400" />
@@ -59,11 +59,11 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           <div className="flex gap-6 mt-4 pt-4 border-t border-white/10">
             <div>
               <p className="text-[9px] uppercase tracking-widest text-zinc-500">Original</p>
-              <p className="text-sm font-bold text-zinc-300">₹{deal.originalPrice?.toLocaleString("en-IN") || "-"}</p>
+              <p className="text-sm font-bold text-zinc-300">₹{deal.originalPrice ? Number(deal.originalPrice).toLocaleString("en-IN") : "-"}</p>
             </div>
             <div>
               <p className="text-[9px] uppercase tracking-widest text-zinc-500">Discount</p>
-              <p className="text-sm font-bold text-red-400">-₹{deal.discount?.toLocaleString("en-IN") || "0"}</p>
+              <p className="text-sm font-bold text-red-400">-₹{deal.discount ? Number(deal.discount).toLocaleString("en-IN") : "0"}</p>
             </div>
           </div>
         )}
@@ -169,10 +169,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{c.agent.name}</p>
-                  <p className="text-[10px] text-zinc-500 font-mono">{c.agent.agentCode} · {c.role} · {c.rate}%</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">{c.agent.agentCode} · {c.role} · {Number(c.rate)}%</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-black text-emerald-600">₹{c.amount.toLocaleString("en-IN")}</p>
+                  <p className="text-sm font-black text-emerald-600">₹{Number(c.amount).toLocaleString("en-IN")}</p>
                   <Badge
                     variant={c.status === "PAID" ? "success" : c.status === "APPROVED" ? "success" : c.status === "DISPUTED" ? "destructive" : "warning"}
                     className="text-[9px] h-4 px-1.5"

@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Users, ChevronRight, UserPlus } from "lucide-react"
+import { Plus, Users, ChevronRight } from "lucide-react"
+import { InviteDialog } from "@/components/invite-dialog"
 
 export default async function AgentsPage() {
   const agents = await getAgents()
@@ -37,13 +38,14 @@ export default async function AgentsPage() {
           </h1>
           <p className="text-sm text-zinc-500 hidden md:block">Manage your agent network and hierarchy.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Link href="/dashboard/agents/hierarchy">
             <Button variant="outline" size="sm" className="rounded-xl h-9 md:h-10 border-zinc-200 dark:border-zinc-800">
               <Users className="md:mr-2 h-4 w-4" />
               <span className="hidden md:inline">Network Map</span>
             </Button>
           </Link>
+          <InviteDialog />
           <Link href="/dashboard/agents/new" className="hidden md:block">
             <Button size="sm" className="font-bold rounded-xl h-10 shadow-sm shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" />

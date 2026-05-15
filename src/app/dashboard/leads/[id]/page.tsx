@@ -112,7 +112,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
             <TableBody>
               {lead.deals.map((deal) => (
                 <TableRow key={deal.id}>
-                  <TableCell className="font-medium">₹{deal.dealValue.toLocaleString("en-IN")}</TableCell>
+                  <TableCell className="font-medium">₹{Number(deal.dealValue).toLocaleString("en-IN")}</TableCell>
                   <TableCell>
                     <Badge variant={deal.status === "CLOSED_WON" ? "success" : deal.status === "CLOSED_LOST" ? "destructive" : "outline"}>
                       {deal.status.replace("_", " ")}
@@ -120,7 +120,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
                   </TableCell>
                   <TableCell className="text-xs text-zinc-500">
                     {deal.commissions.length > 0
-                      ? deal.commissions.map((c) => `${c.agent.name}: ₹${c.amount}`).join(", ")
+                      ? deal.commissions.map((c) => `${c.agent.name}: ₹${Number(c.amount).toLocaleString("en-IN")}`).join(", ")
                       : "—"}
                   </TableCell>
                   <TableCell>
