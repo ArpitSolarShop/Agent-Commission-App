@@ -1,8 +1,11 @@
 -- Enable UUID extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Create System Types Table (if missing)
-CREATE TABLE IF NOT EXISTS system_types (
+-- Create Schema for Agent Commission App
+CREATE SCHEMA IF NOT EXISTS agent_comm;
+
+-- 1. Create System Types Table
+CREATE TABLE IF NOT EXISTS agent_comm.system_types (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL UNIQUE,
   description TEXT,
@@ -11,7 +14,7 @@ CREATE TABLE IF NOT EXISTS system_types (
 );
 
 -- 2. Create Quotations Table
-CREATE TABLE IF NOT EXISTS quotations (
+CREATE TABLE IF NOT EXISTS agent_comm.quotations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   quote_number TEXT,
   customer_name TEXT NOT NULL,
@@ -19,7 +22,7 @@ CREATE TABLE IF NOT EXISTS quotations (
   customer_address TEXT,
   customer_email TEXT,
   quote_date DATE DEFAULT CURRENT_DATE,
-  system_type_id UUID REFERENCES system_types(id),
+  system_type_id UUID REFERENCES agent_comm.system_types(id),
   capacity_kw DECIMAL(10,2),
   phase INTEGER DEFAULT 1,
   brand TEXT,
@@ -39,19 +42,20 @@ CREATE TABLE IF NOT EXISTS quotations (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Insert Default System Types (Only if table is empty)
-INSERT INTO system_types (name, description)
+-- 3. Insert Default System Types
+INSERT INTO agent_comm.system_types (name, description)
 SELECT 'On-grid', 'Grid Connected System'
-WHERE NOT EXISTS (SELECT 1 FROM system_types WHERE name = 'On-grid');
+WHERE NOT EXISTS (SELECT 1 FROM agent_comm.system_types WHERE name = 'On-grid');
 
-INSERT INTO system_types (name, description)
+INSERT INTO agent_comm.system_types (name, description)
 SELECT 'Off-grid', 'Battery Based System'
-WHERE NOT EXISTS (SELECT 1 FROM system_types WHERE name = 'Off-grid');
+WHERE NOT EXISTS (SELECT 1 FROM agent_comm.system_types WHERE name = 'Off-grid');
 
-INSERT INTO system_types (name, description)
+INSERT INTO agent_comm.system_types (name, description)
 SELECT 'Hybrid', 'Hybrid System'
-WHERE NOT EXISTS (SELECT 1 FROM system_types WHERE name = 'Hybrid');
+WHERE NOT EXISTS (SELECT 1 FROM agent_comm.system_types WHERE name = 'Hybrid');
 
-INSERT INTO system_types (name, description)
+INSERT INTO agent_comm.system_types (name, description)
 SELECT 'VFD/Drive', 'Solar Pump Drive'
-WHERE NOT EXISTS (SELECT 1 FROM system_types WHERE name = 'VFD/Drive');
+WHERE NOT EXISTS (SELECT 1 FROM agent_comm.system_types WHERE name = 'VFD/Drive');
+
