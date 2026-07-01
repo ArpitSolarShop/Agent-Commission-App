@@ -13,6 +13,9 @@ import { RevenueChart } from "@/components/analytics/revenue-chart"
 import { ConversionFunnel } from "@/components/analytics/conversion-funnel"
 import { AgentLeaderboard } from "@/components/analytics/agent-leaderboard"
 
+import { CommandCenter } from "@/components/analytics/command-center"
+import { getAuditRecords } from "@/app/actions/audit-actions"
+
 export default async function AnalyticsDashboard() {
   const session = await auth()
   const role = session?.user?.role
@@ -29,6 +32,9 @@ export default async function AnalyticsDashboard() {
   const closedWon = await prisma.deal.count({
     where: { status: "CLOSED_WON" }
   })
+  
+  // 1.5 Fetch Audit Records for Command Center
+  const auditRecords = await getAuditRecords()
 
   const funnelData = [
     { stage: "Total Leads", count: totalLeads },
@@ -146,8 +152,98 @@ export default async function AnalyticsDashboard() {
   })
   const avgTimeToClose = closedDealsStats.length > 0 ? Math.round(totalDays / closedDealsStats.length) : 0
 
+  const overviewContent = (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      
+      {/* ── Left Column (Main Charts) ── */}
+      <div className="lg:col-span-2 space-y-5">
+        
+        {/* Revenue Chart */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800/50 flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Revenue Trends</span>
+            <TrendingUp className="h-4 w-4 text-zinc-400" />
+          </div>
+          <div className="p-4">
+            <RevenueChart data={revenueChartData} />
+          </div>
+        </div>
+
+        {/* Conversion Funnel */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800/50 flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Conversion Funnel</span>
+            <Filter className="h-4 w-4 text-zinc-400" />
+          </div>
+          <div className="p-4">
+            <ConversionFunnel data={funnelData} />
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Right Column (Leaderboard & Quick Stats) ── */}
+      <div className="space-y-5">
+        
+        {/* KPI Summary Cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Conversion */}
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/5 rounded-2xl border border-primary/20 p-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Win Rate</h3>
+            <div className="flex items-end gap-1">
+              <span className="text-2xl font-black text-primary">
+                {totalLeads > 0 ? Math.round((closedWon / totalLeads) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+
+          {/* Pipeline */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 p-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Pipeline</h3>
+            <div className="flex items-end gap-1">
+              <span className="text-lg font-black text-zinc-900 dark:text-zinc-100">
+                ₹{pipelineValue > 100000 ? `${(pipelineValue / 100000).toFixed(1)}L` : pipelineValue.toLocaleString("en-IN")}
+              </span>
+            </div>
+          </div>
+
+          {/* Avg Deal */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 p-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Avg Deal</h3>
+            <div className="flex items-end gap-1">
+              <span className="text-lg font-black text-zinc-900 dark:text-zinc-100">
+                ₹{avgDealSize > 100000 ? `${(avgDealSize / 100000).toFixed(1)}L` : avgDealSize.toLocaleString("en-IN")}
+              </span>
+            </div>
+          </div>
+
+          {/* Velocity */}
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 p-4">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Velocity</h3>
+            <div className="flex items-end gap-1">
+              <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">
+                {avgTimeToClose}
+              </span>
+              <span className="text-[10px] font-bold text-zinc-400 mb-1">DAYS</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Leaderboard */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800/50 flex items-center justify-between">
+            <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Agent Sales Report</span>
+            <Users className="h-4 w-4 text-amber-500" />
+          </div>
+          <AgentLeaderboard data={leaderboardData} />
+        </div>
+
+      </div>
+    </div>
+  )
+
   return (
-    <div className="space-y-5 max-w-5xl mx-auto pb-20 md:pb-0">
+    <div className="space-y-8 max-w-6xl mx-auto pb-20 md:pb-0">
       {/* ── Header ── */}
       <div className="flex flex-col gap-1">
         <p className="text-[10px] md:text-xs font-black text-zinc-400 uppercase tracking-widest">
@@ -158,92 +254,18 @@ export default async function AnalyticsDashboard() {
         </h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        
-        {/* ── Left Column (Main Charts) ── */}
-        <div className="lg:col-span-2 space-y-5">
-          
-          {/* Revenue Chart */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800/50 flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Revenue Trends</span>
-              <TrendingUp className="h-4 w-4 text-zinc-400" />
-            </div>
-            <div className="p-4">
-              <RevenueChart data={revenueChartData} />
-            </div>
-          </div>
+      {/* Primary Overview KPIs and Charts */}
+      {overviewContent}
 
-          {/* Conversion Funnel */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800/50 flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Conversion Funnel</span>
-              <Filter className="h-4 w-4 text-zinc-400" />
-            </div>
-            <div className="p-4">
-              <ConversionFunnel data={funnelData} />
-            </div>
-          </div>
-
+      {/* Advanced Insights and Audit (formerly Command Center) */}
+      <div className="pt-8 mt-8 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="mb-6">
+          <h2 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            Advanced Sales Insights
+          </h2>
+          <p className="text-xs text-zinc-500">Deep dive into revenue milestones, capacity segments, and deal audits.</p>
         </div>
-
-        {/* ── Right Column (Leaderboard & Quick Stats) ── */}
-        <div className="space-y-5">
-          
-          {/* KPI Summary Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Conversion */}
-            <div className="bg-gradient-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/5 rounded-2xl border border-primary/20 p-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Win Rate</h3>
-              <div className="flex items-end gap-1">
-                <span className="text-2xl font-black text-primary">
-                  {totalLeads > 0 ? Math.round((closedWon / totalLeads) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-
-            {/* Pipeline */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 p-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Pipeline</h3>
-              <div className="flex items-end gap-1">
-                <span className="text-lg font-black text-zinc-900 dark:text-zinc-100">
-                  ₹{pipelineValue > 100000 ? `${(pipelineValue / 100000).toFixed(1)}L` : pipelineValue.toLocaleString("en-IN")}
-                </span>
-              </div>
-            </div>
-
-            {/* Avg Deal */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 p-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Avg Deal</h3>
-              <div className="flex items-end gap-1">
-                <span className="text-lg font-black text-zinc-900 dark:text-zinc-100">
-                  ₹{avgDealSize > 100000 ? `${(avgDealSize / 100000).toFixed(1)}L` : avgDealSize.toLocaleString("en-IN")}
-                </span>
-              </div>
-            </div>
-
-            {/* Velocity */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 p-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2">Velocity</h3>
-              <div className="flex items-end gap-1">
-                <span className="text-2xl font-black text-zinc-900 dark:text-zinc-100">
-                  {avgTimeToClose}
-                </span>
-                <span className="text-[10px] font-bold text-zinc-400 mb-1">DAYS</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Leaderboard */}
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-50 dark:border-zinc-800/50 flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-zinc-100">Agent Sales Report</span>
-              <Users className="h-4 w-4 text-amber-500" />
-            </div>
-            <AgentLeaderboard data={leaderboardData} />
-          </div>
-
-        </div>
+        <CommandCenter initialRecords={auditRecords} />
       </div>
     </div>
   )

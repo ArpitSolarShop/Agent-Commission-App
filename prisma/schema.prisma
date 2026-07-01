@@ -1,13 +1,13 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  schemas   = ["agent_comm"]
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ model User {
   sessions      Session[]
 
   @@map("users")
-  @@schema("agent_comm")
+  
 }
 
 model Account {
@@ -51,7 +51,7 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
-  @@schema("agent_comm")
+  
 }
 
 model Session {
@@ -62,7 +62,7 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
-  @@schema("agent_comm")
+  
 }
 
 model VerificationToken {
@@ -72,7 +72,7 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ model Agent {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@map("agents")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -139,7 +139,7 @@ model Lead {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@map("leads")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ model LeadContact {
 
   @@index([phoneNumber])
   @@map("lead_contacts")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ model LeadAssignment {
   assignedAt  DateTime @default(now()) @map("assigned_at")
 
   @@map("lead_assignments")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -211,7 +211,7 @@ model Deal {
 
   @@index([leadId]) 
   @@map("deals")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -242,7 +242,7 @@ model Commission {
   @@index([agentId])               
   @@index([status])                
   @@map("commissions")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -262,7 +262,7 @@ model Payout {
   paidBy       String     @map("paid_by")
 
   @@map("payouts")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -281,7 +281,7 @@ model LeadActivity {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("lead_activities")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -299,7 +299,7 @@ model CommissionTier {
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@map("commission_tiers")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -319,7 +319,7 @@ model SystemType {
   createdAt    DateTime  @default(now()) @map("created_at")
 
   @@map("system_types")
-  @@schema("agent_comm")
+  
 }
 
 model Product {
@@ -338,7 +338,7 @@ model Product {
   createdAt    DateTime   @default(now()) @map("created_at")
 
   @@map("products")
-  @@schema("agent_comm")
+  
 }
 
 model IntegratedProduct {
@@ -366,7 +366,7 @@ model IntegratedProduct {
   createdAt           DateTime @default(now()) @map("created_at")
 
   @@map("integrated_products")
-  @@schema("agent_comm")
+  
 }
 
 model Component {
@@ -384,7 +384,7 @@ model Component {
   createdAt      DateTime   @default(now()) @map("created_at")
 
   @@map("solar_product_components")
-  @@schema("agent_comm")
+  
 }
 
 model Quotation {
@@ -421,7 +421,7 @@ model Quotation {
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
   @@map("quotations")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -449,7 +449,7 @@ model RecruitmentRequest {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("recruitment_requests")
-  @@schema("agent_comm")
+  
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -471,5 +471,26 @@ model InviteToken {
   createdAt        DateTime  @default(now()) @map("created_at")
 
   @@map("invite_tokens")
-  @@schema("agent_comm")
+  
 }
+
+// ─────────────────────────────────────────────────────────────────
+// ENTERPRISE AUDIT RECORDS (For Analytics Command Center)
+// ─────────────────────────────────────────────────────────────────
+
+model EnterpriseAuditRecord {
+  id          String   @id @default(uuid())
+  customer    String
+  mobile      String?
+  date        DateTime
+  capacity    Float
+  amount      Float
+  salesperson String
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("enterprise_audit_records")
+  
+}
+

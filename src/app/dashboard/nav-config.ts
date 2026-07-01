@@ -17,6 +17,7 @@ export const getNavItems = (role: string) => {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
       { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
+
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Network, label: "Network", href: "/dashboard/agents/hierarchy" },
@@ -32,6 +33,7 @@ export const getNavItems = (role: string) => {
     return [
       { icon: LayoutDashboard, label: "Home", href: "/dashboard" },
       { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics" },
+
       { icon: Package, label: "Catalog", href: "/dashboard/catalog" },
       { icon: Users, label: "Agents", href: "/dashboard/agents" },
       { icon: Network, label: "Network", href: "/dashboard/agents/hierarchy" },
